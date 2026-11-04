@@ -30,26 +30,32 @@ const nullable = (schema: Record<string, unknown>) => ({ anyOf: [schema, { type:
 export const EXTRACTION_JSON_SCHEMA = {
   type: 'object',
   additionalProperties: false,
-  required: ['panel', 'circuits', 'uncertain'],
+  required: ['panels', 'uncertain'],
   properties: {
-    panel: {
-      type: 'object',
-      additionalProperties: false,
-      required: ['name', 'location'],
-      properties: { name: nullable({ type: 'string' }), location: nullable({ type: 'string' }) },
-    },
-    circuits: {
+    panels: {
       type: 'array',
       items: {
         type: 'object',
         additionalProperties: false,
-        required: ['no', 'name', 'system', 'useVoltage', 'breakerA'],
+        required: ['name', 'location', 'circuits'],
         properties: {
-          no: nullable({ type: 'string' }),
           name: nullable({ type: 'string' }),
-          system: nullable({ type: 'string', enum: [...WIRING_SYSTEMS] }),
-          useVoltage: nullable({ type: 'number' }),
-          breakerA: nullable({ type: 'number' }),
+          location: nullable({ type: 'string' }),
+          circuits: {
+            type: 'array',
+            items: {
+              type: 'object',
+              additionalProperties: false,
+              required: ['no', 'name', 'system', 'useVoltage', 'breakerA'],
+              properties: {
+                no: nullable({ type: 'string' }),
+                name: nullable({ type: 'string' }),
+                system: nullable({ type: 'string', enum: [...WIRING_SYSTEMS] }),
+                useVoltage: nullable({ type: 'number' }),
+                breakerA: nullable({ type: 'number' }),
+              },
+            },
+          },
         },
       },
     },
@@ -65,26 +71,33 @@ export const EXTRACTION_JSON_SCHEMA = {
   },
 } as const;
 
-export const SYSTEM_PROMPT = `あなたは配電盤の資料（単線結線図・盤図面・銘板や回路名称表示の写真）から、絶縁抵抗測定報告書の作成に必要な情報を書き写す担当です。
+export const SYSTEM_PROMPT = `あなたは配電盤の資料（単線結線図・盤図面・負荷表・銘板や回路名称表示の写真）から、絶縁抵抗測定報告書の作成に必要な情報を書き写す担当です。
 抜き出した内容は、利用者が元資料と見比べて確認・修正してから報告書に使います。そのため、正確さと「自信のなさを正直に示すこと」を何より重視してください。
 
-# 抜き出す項目
-- panel.name: 盤名（例: 「電灯盤 L-1」「P-1」）
-- panel.location: 設置場所（資料に書かれている場合のみ）
-- circuits: 回路ごとに no（回路No。資料の表記のまま文字列）、name（回路名称）、system（電気方式）、useVoltage（使用電圧 [V]）、breakerA（ブレーカ容量 [A]）
+# 出力の構造
+panels: 盤ごとに1要素。1つの資料に盤が複数並んでいる場合（盤ごとの表が並ぶ負荷表など）は、盤の数だけ要素を作ります。
+- name: 盤名（例: 「低圧動力盤 No.4」「電灯盤 L-1」）。表の近くや欄外に書かれていることが多い
+- location: 設置場所（資料に書かれている場合のみ）
+- circuits: 回路ごとに no（回路No）、name（回路名称）、system（電気方式）、useVoltage（使用電圧 [V]）、breakerA（ブレーカ容量 [A]）
+
+# 資料の読み方
+- 資料や表は、90度・180度回転していることがあります。読める向きに直して読んでください（縦書きに見える文字は、実際は横向きの文字のことがあります）。
+- 表の見出しと項目の対応:
+  - 「負荷名称」「回路名称」→ name。名称が複数行にわたる場合は1つの名称にまとめます（例: 「1FP-2-1, 1FP-2-2, 1FP-2-3」）
+  - 「ELB No.」「ブレーカNo.」「回路No.」「MCB No.」→ no（資料の表記のまま文字列）
+  - 「AT」（トリップ電流）→ breakerA。「AF」（フレーム）や「P」（極数）は使いません。AT が空欄なら breakerA は null
+- 電気方式と電圧（例: 「3φ3W 210V」「3φ3W 440V」）が、表の端に1回だけ書かれて複数の回路に共通している場合は、その範囲のすべての回路に system と useVoltage を入れてください。表の途中で区画が変わり別の方式・電圧が書かれている場合は、区画ごとに適用します。
+- 使用電圧は数値 [V] にします。「100/200V」のように2つ書かれている場合は大きい方です。
+- 電気方式は 1φ2W / 1φ3W / 3φ3W / 3φ4W のどれかに直してください（例: 1Φ3W、単相3線、1P3W → 1φ3W、三相3線 → 3φ3W）。判断できなければ null です。
+- 「予備」「スペース」の行も1回路として含めます（名称は資料の表記のまま）。回路は資料に現れる順に並べ、重複して書かないでください。
+- テキスト層が付いているページは、画像とテキスト層の両方を見てください。文字はテキスト層の方が正確ですが、表の行・列の対応は画像で確かめてください。
 
 # 守ること
 - 資料に書かれていることだけを書き写してください。推測で埋めてはいけません。
 - 読めない・書かれていない項目は null にし、uncertain に記録してください。
-- 値は入れたが自信がない項目（かすれ、手書き、重なり、解釈に迷う表記など）も uncertain に理由を付けて記録してください。
-- uncertain の field は "panel.name"、"panel.location"、"circuits.{0から始まる行番号}.{no|name|system|useVoltage|breakerA}" の形で書いてください。reason は日本語で短く書いてください。
-- 電気方式は 1φ2W / 1φ3W / 3φ3W / 3φ4W のどれかに直してください（例: 1Φ3W、単相3線、1P3W → 1φ3W）。資料から判断できなければ null です。
-- 使用電圧は数値 [V] にしてください。「100/200V」「200/100V」のように2つ書かれている場合は大きい方の値にしてください。
-- breakerA はトリップ電流（AT）の値です。フレーム（AF）しか書かれていない場合は null にし、uncertain に記録してください。
-- 予備回路も1回路として含めてください（名称は資料の表記のまま。例: 「予備」）。
-- 回路は資料に現れる順に並べてください。同じ回路を重複して書かないでください。
-- 1つの資料に複数の盤がある場合は、最も主要な1面の盤だけを対象にし、uncertain に field "panel.name"、reason「複数の盤が含まれています（◯◯、△△）」と記録してください。
-- テキスト層が付いているページは、画像とテキスト層の両方を見てください。文字はテキスト層の方が正確ですが、表の行・列の対応は画像で確かめてください。`;
+- 値は入れたが自信がない項目（かすれ、解像度が低い、手書き、重なり、数字の読み違いの恐れなど）も、uncertain に理由を付けて記録してください。数字（回路No、AT、電圧）は特に慎重に。
+- uncertain の field は、番号を 0 から数えて "panels.{盤}.name"、"panels.{盤}.location"、"panels.{盤}.circuits.{行}.{no|name|system|useVoltage|breakerA}" の形で書いてください。reason は日本語で短く書いてください。
+- 盤が複数あるとき、盤の並び順は資料の左から右、上から下の順にしてください。`;
 
 function pageContent(dataDir: string, importId: string, pages: ImportPage[]): Anthropic.Beta.BetaContentBlockParam[] {
   const content: Anthropic.Beta.BetaContentBlockParam[] = [];

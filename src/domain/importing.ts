@@ -1,5 +1,5 @@
 /** 確認・修正画面で確定した内容を報告書に反映する（純粋関数）。 */
-import type { ConfirmBody } from '../shared/extraction.ts';
+import type { ConfirmPanel } from '../shared/extraction.ts';
 import type { Circuit, Report } from '../shared/schema.ts';
 import { autoGroundVoltage } from './groundVoltage.ts';
 
@@ -11,7 +11,13 @@ export function defaultTestVoltage(useVoltage: number): Circuit['testVoltage'] {
   return useVoltage > 300 ? 500 : 250;
 }
 
-export function confirmedCircuits(body: ConfirmBody, source: Circuit['source'], newId: () => string): Circuit[] {
+/** 1つの盤の確定内容を報告書へ反映する指定 */
+export interface ApplyBody extends ConfirmPanel {
+  mode: 'new' | 'append' | 'replace';
+  applyPanel: boolean;
+}
+
+export function confirmedCircuits(body: ConfirmPanel, source: Circuit['source'], newId: () => string): Circuit[] {
   return body.circuits.map((c) => ({
     id: newId(),
     no: c.no,
@@ -29,7 +35,7 @@ export function confirmedCircuits(body: ConfirmBody, source: Circuit['source'], 
 /** 既存（または新規）の報告書へ反映した結果を返す。 */
 export function applyConfirmation(
   report: Report,
-  body: ConfirmBody,
+  body: ApplyBody,
   source: Circuit['source'],
   sourceFiles: string[],
   newId: () => string,

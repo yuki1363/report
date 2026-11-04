@@ -5,7 +5,7 @@
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { createWorker, PSM } from 'tesseract.js';
-import { circuitField, type Extraction, type ExtractedCircuit } from '../../shared/extraction.ts';
+import { circuitField, panelField, type Extraction, type ExtractedCircuit } from '../../shared/extraction.ts';
 import type { WiringSystem } from '../../shared/schema.ts';
 
 const require = createRequire(import.meta.url);
@@ -88,19 +88,20 @@ export function parseOcrText(texts: string[]): Extraction {
     // 表の罫線は「|」「[」などに読まれるので区切りとして扱う
     .map((l) => toHalf(l).replace(/[|｜\[\]]/g, ' ').replace(/\s+/g, ' ').trim())
     .filter(Boolean);
-  const result: Extraction = { panel: { name: null, location: null }, circuits: [], uncertain: [] };
+  const panel: Extraction['panels'][number] = { name: null, location: null, circuits: [] };
+  const result: Extraction = { panels: [panel], uncertain: [] };
 
   const panelLine = lines.find((l) => /盤/.test(l) && l.length <= 40 && !/^設置場所/.test(l));
   if (panelLine) {
-    result.panel.name = panelLine
+    panel.name = panelLine
       .replace(/^(盤名|名称)\s*[:：・]?\s*/, '')
       .replace(/\s*(単線結線図|結線図|盤図|姿図|回路図)\s*$/, '')
       .trim();
   }
-  result.uncertain.push({ field: 'panel.name', reason: panelLine ? OCR_REASON : '読み取れませんでした' });
+  result.uncertain.push({ field: panelField(0, 'name'), reason: panelLine ? OCR_REASON : '読み取れませんでした' });
   const locLine = lines.find((l) => /^設置場所/.test(l));
-  if (locLine) result.panel.location = locLine.replace(/^設置場所\s*[:：・]?\s*/, '').trim() || null;
-  result.uncertain.push({ field: 'panel.location', reason: result.panel.location ? OCR_REASON : '読み取れませんでした' });
+  if (locLine) panel.location = locLine.replace(/^設置場所\s*[:：・]?\s*/, '').trim() || null;
+  result.uncertain.push({ field: panelField(0, 'location'), reason: panel.location ? OCR_REASON : '読み取れませんでした' });
 
   for (const l of lines) {
     const m = /^(?:No\.?\s*)?(\d{1,3}(?:-\d{1,3})?)[\s.:、)]+(.+)$/.exec(l);
@@ -122,10 +123,10 @@ export function parseOcrText(texts: string[]): Extraction {
       useVoltage: volts.length ? Math.max(...volts) : null,
       breakerA: at ? Number(at[1]) : null,
     };
-    const i = result.circuits.length;
-    result.circuits.push(c);
+    const i = panel.circuits.length;
+    panel.circuits.push(c);
     for (const k of ['no', 'name', 'system', 'useVoltage', 'breakerA'] as const) {
-      result.uncertain.push({ field: circuitField(i, k), reason: c[k] === null ? '読み取れませんでした' : OCR_REASON });
+      result.uncertain.push({ field: circuitField(0, i, k), reason: c[k] === null ? '読み取れませんでした' : OCR_REASON });
     }
   }
   return result;

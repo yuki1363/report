@@ -20,15 +20,21 @@ const app = createApp({
       return {
         model: 'test-model',
         result: {
-          panel: { name: '電灯盤 L-1', location: null },
-          circuits: [{ no: '1', name: '照明', system: '1φ3W', useVoltage: 200, breakerA: 20 }, { no: '2', name: null, system: null, useVoltage: 100, breakerA: null }],
-          uncertain: [{ field: 'circuits.1.name', reason: 'かすれ' }],
+          panels: [
+            {
+              name: '電灯盤 L-1',
+              location: null,
+              circuits: [{ no: '1', name: '照明', system: '1φ3W', useVoltage: 200, breakerA: 20 }, { no: '2', name: null, system: null, useVoltage: 100, breakerA: null }],
+            },
+            { name: '電灯盤 L-2', location: null, circuits: [{ no: '1', name: '予備', system: '1φ2W', useVoltage: 100, breakerA: null }] },
+          ],
+          uncertain: [{ field: 'panels.0.circuits.1.name', reason: 'かすれ' }],
         },
       };
     },
     ocr: async (_d, _id, pages) => {
       calls.push(`ocr:${pages.length}`);
-      return { panel: { name: null, location: null }, circuits: [], uncertain: [] };
+      return { panels: [{ name: null, location: null, circuits: [] }], uncertain: [] };
     },
     megger: async () => ({ kind: 'value', mohm: 52.3, displayText: '52.3MΩ', reason: null }),
   },
@@ -85,26 +91,41 @@ describe('取込 → 読み取り → 確認・確定', () => {
     store.saveSettings({ ...store.getSettings(), aiExtraction: true });
     const r = (await (await json(`/api/imports/${rec.id}/extract`, 'POST', {})).json()) as ImportRecord;
     expect(r).toMatchObject({ engine: 'ai', model: 'test-model', status: 'extracted' });
-    expect(r.result!.uncertain).toContainEqual({ field: 'circuits.1.name', reason: 'かすれ' });
+    expect(r.result!.uncertain).toContainEqual({ field: 'panels.0.circuits.1.name', reason: 'かすれ' });
+    expect(r.result!.panels).toHaveLength(2);
     expect(store.listReports()).toEqual([]);
   });
 
-  it('確定（新規報告書）', async () => {
+  it('確定（盤が2面 → 報告書が2件）', async () => {
     const res = await json(`/api/imports/${rec.id}/confirm`, 'POST', {
-      mode: 'new', applyPanel: true, panel: { name: '電灯盤 L-1', location: '' },
-      circuits: [{ no: '1', name: '照明', system: '1φ3W', useVoltage: 200, breakerA: 20 }, { no: '2', name: '予備', system: '1φ2W', useVoltage: 100 }],
+      mode: 'new', applyPanel: true,
+      panels: [
+        { panel: { name: '電灯盤 L-1', location: '' }, circuits: [{ no: '1', name: '照明', system: '1φ3W', useVoltage: 200, breakerA: 20 }, { no: '2', name: '予備', system: '1φ2W', useVoltage: 100 }] },
+        { panel: { name: '電灯盤 L-2', location: '2F' }, circuits: [{ no: '1', name: '予備', system: '1φ2W', useVoltage: 100 }] },
+      ],
     });
     expect(res.status).toBe(200);
-    const report = (await res.json()) as Report;
-    expect(report.circuits.map((c) => c.source)).toEqual(['ai', 'ai']);
-    expect(report.sourceFiles).toEqual([`imports/${rec.id}/src-0.pdf`]);
+    const { reports } = (await res.json()) as { reports: Report[] };
+    expect(reports.map((r) => `${r.panel.name}:${r.circuits.length}`)).toEqual(['電灯盤 L-1:2', '電灯盤 L-2:1']);
+    expect(reports[0]!.circuits.map((c) => c.source)).toEqual(['ai', 'ai']);
+    expect(reports[0]!.sourceFiles).toEqual([`imports/${rec.id}/src-0.pdf`]);
     expect((await json(`/api/imports/${rec.id}/confirm`, 'POST', {})).status).toBe(409);
+  });
+
+  it('既存の報告書へ反映できる盤は1つだけ', async () => {
+    const r3 = (await (await upload()).json()) as ImportRecord;
+    const target = store.listReports()[0]!.id;
+    const p = { panel: { name: 'x', location: '' }, circuits: [{ no: '1', name: 'a', system: '1φ2W', useVoltage: 100 }] };
+    const res = await json(`/api/imports/${r3.id}/confirm`, 'POST', { mode: 'append', targetReportId: target, applyPanel: false, panels: [p, p] });
+    expect(res.status).toBe(400);
+    const ok = await json(`/api/imports/${r3.id}/confirm`, 'POST', { mode: 'append', targetReportId: target, applyPanel: false, panels: [p] });
+    expect(((await ok.json()) as { reports: Report[] }).reports[0]!.circuits.length).toBe(3);
   });
 
   it('未確定の値（電気方式なし）は確定できない', async () => {
     const r2 = (await (await upload()).json()) as ImportRecord;
     const res = await json(`/api/imports/${r2.id}/confirm`, 'POST', {
-      mode: 'new', applyPanel: true, panel: { name: 'x', location: '' }, circuits: [{ no: '1', name: 'a', useVoltage: 100 }],
+      mode: 'new', applyPanel: true, panels: [{ panel: { name: 'x', location: '' }, circuits: [{ no: '1', name: 'a', useVoltage: 100 }] }],
     });
     expect(res.status).toBe(400);
   });

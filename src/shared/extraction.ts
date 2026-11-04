@@ -5,7 +5,7 @@
 import { z } from 'zod';
 import { WiringSystemSchema } from './schema.ts';
 
-/** 読み取り結果（Claude / OCR 共通）。読めない項目は null。 */
+/** 読み取り結果（Claude / OCR 共通）。読めない項目は null。1つの資料に盤が複数あれば panels に複数入る。 */
 export const ExtractedCircuitSchema = z.object({
   no: z.string().nullable(),
   name: z.string().nullable(),
@@ -15,10 +15,19 @@ export const ExtractedCircuitSchema = z.object({
 });
 export type ExtractedCircuit = z.infer<typeof ExtractedCircuitSchema>;
 
-export const ExtractionSchema = z.object({
-  panel: z.object({ name: z.string().nullable(), location: z.string().nullable() }),
+export const ExtractedPanelSchema = z.object({
+  name: z.string().nullable(),
+  location: z.string().nullable(),
   circuits: z.array(ExtractedCircuitSchema),
-  /** field の書式: "panel.name" / "panel.location" / "circuits.{0始まりの行番号}.{no|name|system|useVoltage|breakerA}" */
+});
+export type ExtractedPanel = z.infer<typeof ExtractedPanelSchema>;
+
+export const ExtractionSchema = z.object({
+  panels: z.array(ExtractedPanelSchema),
+  /**
+   * field の書式（番号は 0 始まり）:
+   *   "panels.{盤}.name" / "panels.{盤}.location" / "panels.{盤}.circuits.{行}.{no|name|system|useVoltage|breakerA}"
+   */
   uncertain: z.array(z.object({ field: z.string(), reason: z.string() })),
 });
 export type Extraction = z.infer<typeof ExtractionSchema>;
@@ -54,12 +63,7 @@ export const ImportRecordSchema = z.object({
 export type ImportRecord = z.infer<typeof ImportRecordSchema>;
 
 /** 確認・修正画面で利用者が確定した内容 */
-export const ConfirmBodySchema = z.object({
-  /** new: 新しい報告書 / append: 既存報告書の回路の後ろに追加 / replace: 既存報告書の回路を置き換え */
-  mode: z.enum(['new', 'append', 'replace']),
-  targetReportId: z.string().optional(),
-  /** 既存報告書に反映する場合、盤名・設置場所も上書きするか */
-  applyPanel: z.boolean(),
+export const ConfirmPanelSchema = z.object({
   panel: z.object({ name: z.string(), location: z.string() }),
   circuits: z.array(
     z.object({
@@ -71,30 +75,47 @@ export const ConfirmBodySchema = z.object({
     }),
   ),
 });
+export type ConfirmPanel = z.infer<typeof ConfirmPanelSchema>;
+
+export const ConfirmBodySchema = z
+  .object({
+    /** new: 盤ごとに新しい報告書 / append: 既存報告書の回路の後ろに追加 / replace: 既存報告書の回路を置き換え */
+    mode: z.enum(['new', 'append', 'replace']),
+    targetReportId: z.string().optional(),
+    /** 既存報告書に反映する場合、盤名・設置場所も上書きするか */
+    applyPanel: z.boolean(),
+    panels: z.array(ConfirmPanelSchema).min(1),
+  })
+  .superRefine((b, ctx) => {
+    if (b.mode !== 'new' && b.panels.length !== 1) {
+      ctx.addIssue({ code: 'custom', message: '既存の報告書に反映できるのは1つの盤だけです' });
+    }
+  });
 export type ConfirmBody = z.infer<typeof ConfirmBodySchema>;
 
 /** uncertain の field 名を作る */
-export const circuitField = (i: number, key: keyof ExtractedCircuit) => `circuits.${i}.${key}`;
+export const panelField = (p: number, key: 'name' | 'location') => `panels.${p}.${key}`;
+export const circuitField = (p: number, i: number, key: keyof ExtractedCircuit) => `panels.${p}.circuits.${i}.${key}`;
 
-/** 複数回の読み取り結果（ページ分割時）を1つにまとめる。回路の行番号を付け替える。 */
+/** 複数回の読み取り結果（ページ分割時）を1つにまとめる。盤の番号を付け替える。 */
 export function mergeExtractions(parts: Extraction[]): Extraction {
-  const out: Extraction = { panel: { name: null, location: null }, circuits: [], uncertain: [] };
-  for (const p of parts) {
-    const offset = out.circuits.length;
-    if (out.panel.name === null && p.panel.name !== null) out.panel.name = p.panel.name;
-    if (out.panel.location === null && p.panel.location !== null) out.panel.location = p.panel.location;
-    out.circuits.push(...p.circuits);
-    for (const u of p.uncertain) {
-      const m = /^circuits\.(\d+)\.(.+)$/.exec(u.field);
-      out.uncertain.push(m ? { ...u, field: `circuits.${Number(m[1]) + offset}.${m[2]}` } : u);
+  const out: Extraction = { panels: [], uncertain: [] };
+  for (const part of parts) {
+    const offset = out.panels.length;
+    out.panels.push(...part.panels);
+    for (const u of part.uncertain) {
+      const m = /^panels\.(\d+)\.(.+)$/.exec(u.field);
+      out.uncertain.push(m ? { ...u, field: `panels.${Number(m[1]) + offset}.${m[2]}` } : u);
     }
   }
   // null の項目は uncertain に必ず載せる（理由が無ければ補う）
   const has = new Set(out.uncertain.map((u) => u.field));
   const need = (f: string) => !has.has(f) && out.uncertain.push({ field: f, reason: '読み取れませんでした' });
-  if (out.panel.name === null) need('panel.name');
-  out.circuits.forEach((c, i) => {
-    for (const k of ['no', 'name', 'system', 'useVoltage'] as const) if (c[k] === null) need(circuitField(i, k));
+  out.panels.forEach((pn, p) => {
+    if (pn.name === null) need(panelField(p, 'name'));
+    pn.circuits.forEach((c, i) => {
+      for (const k of ['no', 'name', 'system', 'useVoltage'] as const) if (c[k] === null) need(circuitField(p, i, k));
+    });
   });
   return out;
 }

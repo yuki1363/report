@@ -6,6 +6,15 @@ import { api } from '../api.ts';
 import { navigate } from '../nav.ts';
 
 type Key = keyof ExtractedCircuit;
+interface PanelState {
+  pid: number;
+  name: string;
+  location: string;
+  include: boolean;
+  unc: { name?: string; location?: string };
+  rows: Row[];
+}
+
 interface Row {
   rid: number;
   no: string;
@@ -40,9 +49,8 @@ export function ConfirmPage({ id, auto }: { id: string; auto: boolean }) {
   const [rec, setRec] = useState<ImportRecord | null>(null);
   const [error, setError] = useState('');
   const [running, setRunning] = useState(false);
-  const [panel, setPanel] = useState({ name: '', location: '' });
-  const [panelUnc, setPanelUnc] = useState<{ name?: string; location?: string }>({});
-  const [rows, setRows] = useState<Row[]>([]);
+  const [panels, setPanels] = useState<PanelState[]>([]);
+  const [cur, setCur] = useState(0);
   const [mode, setMode] = useState<'new' | 'append' | 'replace'>('new');
   const [applyPanel, setApplyPanel] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -53,18 +61,27 @@ export function ConfirmPage({ id, auto }: { id: string; auto: boolean }) {
     if (r.targetReportId) setMode((m) => (m === 'new' ? 'append' : m));
     if (r.result) {
       const unc = new Map(r.result.uncertain.map((u) => [u.field, u.reason]));
-      setPanel({ name: r.result.panel.name ?? '', location: r.result.panel.location ?? '' });
-      setPanelUnc({ ...(unc.has('panel.name') ? { name: unc.get('panel.name')! } : {}), ...(unc.has('panel.location') ? { location: unc.get('panel.location')! } : {}) });
-      setRows(
-        r.result.circuits.map((c, i) => {
-          const u: Row['unc'] = {};
-          for (const k of ['no', 'name', 'system', 'useVoltage', 'breakerA'] as const) {
-            const reason = unc.get(`circuits.${i}.${k}`);
-            if (reason) u[k] = reason;
-          }
-          return toRow(c, u);
-        }),
+      setPanels(
+        r.result.panels.map((pn, p) => ({
+          pid: ridSeq++,
+          name: pn.name ?? '',
+          location: pn.location ?? '',
+          include: true,
+          unc: {
+            ...(unc.has(`panels.${p}.name`) ? { name: unc.get(`panels.${p}.name`)! } : {}),
+            ...(unc.has(`panels.${p}.location`) ? { location: unc.get(`panels.${p}.location`)! } : {}),
+          },
+          rows: pn.circuits.map((c, i) => {
+            const u: Row['unc'] = {};
+            for (const k of ['no', 'name', 'system', 'useVoltage', 'breakerA'] as const) {
+              const reason = unc.get(`panels.${p}.circuits.${i}.${k}`);
+              if (reason) u[k] = reason;
+            }
+            return toRow(c, u);
+          }),
+        })),
       );
+      setCur(0);
     }
   };
 
@@ -95,21 +112,33 @@ export function ConfirmPage({ id, auto }: { id: string; auto: boolean }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  const rowErrors = useMemo(
-    () =>
-      rows.map((r) => {
-        const e: string[] = [];
-        if (!r.system) e.push('電気方式');
-        const v = num(r.useVoltage);
-        if (v === undefined || Number.isNaN(v) || v <= 0) e.push('使用電圧');
-        const b = num(r.breakerA);
-        if (b !== undefined && (Number.isNaN(b) || b < 0)) e.push('ブレーカ容量');
-        return e;
-      }),
-    [rows],
-  );
-  const hasErrors = rowErrors.some((e) => e.length) || (mode === 'new' && !panel.name.trim());
-  const remainingUnc = rows.reduce((n, r) => n + Object.keys(r.unc).length, 0) + Object.keys(panelUnc).length;
+  const panel = panels[cur];
+  const rows = panel?.rows ?? [];
+  const setPanel = (patch: Partial<PanelState>) => setPanels((ps) => ps.map((p, i) => (i === cur ? { ...p, ...patch } : p)));
+  const setRows = (fn: (rs: Row[]) => Row[]) => setPanels((ps) => ps.map((p, i) => (i === cur ? { ...p, rows: fn(p.rows) } : p)));
+
+  /** 盤ごとの入力エラー（反映対象の盤だけ検査する） */
+  const errorsOf = (pn: PanelState): { rowErrors: string[][]; nameMissing: boolean } => ({
+    rowErrors: pn.rows.map((r) => {
+      const e: string[] = [];
+      if (!r.system) e.push('電気方式');
+      const v = num(r.useVoltage);
+      if (v === undefined || Number.isNaN(v) || v <= 0) e.push('使用電圧');
+      const b = num(r.breakerA);
+      if (b !== undefined && (Number.isNaN(b) || b < 0)) e.push('ブレーカ容量');
+      return e;
+    }),
+    nameMissing: mode === 'new' && !pn.name.trim(),
+  });
+  const allErrors = panels.map(errorsOf);
+  const included = panels.filter((p) => p.include);
+  const errorPanels = panels.flatMap((p, i) => (p.include && (allErrors[i]!.nameMissing || allErrors[i]!.rowErrors.some((e) => e.length)) ? [i] : []));
+  const rowErrors = panel ? allErrors[cur]!.rowErrors : [];
+  const hasErrors = errorPanels.length > 0;
+  const uncOf = (pn: PanelState) => pn.rows.reduce((n, r) => n + Object.keys(r.unc).length, 0) + Object.keys(pn.unc).length;
+  const remainingUnc = included.reduce((n, p) => n + uncOf(p), 0);
+  const totalCircuits = included.reduce((n, p) => n + p.rows.length, 0);
+  const needSingle = mode !== 'new' && included.length !== 1;
 
   if (!rec) return error ? <p className="error">{error}</p> : <p>読み取り中…</p>;
 
@@ -125,28 +154,31 @@ export function ConfirmPage({ id, auto }: { id: string; auto: boolean }) {
     );
 
   const confirm = async () => {
-    if (hasErrors) return;
+    if (hasErrors || needSingle) return;
     if (remainingUnc > 0 && !window.confirm(`黄色の「要確認」項目が ${remainingUnc} 件残っています。元資料と見比べて確認しましたか？\n確定すると報告書に反映します。`)) return;
     if (mode === 'replace' && !window.confirm('報告書の回路を、この内容で置き換えます（入力済みの測定値も消えます）。よろしいですか？')) return;
     setSaving(true);
     try {
-      const report = await api.confirmImport(id, {
+      const { reports } = await api.confirmImport(id, {
         mode,
         ...(rec.targetReportId && mode !== 'new' ? { targetReportId: rec.targetReportId } : {}),
         applyPanel: mode === 'new' || applyPanel,
-        panel: { name: panel.name.trim(), location: panel.location.trim() },
-        circuits: rows.map((r) => {
-          const b = num(r.breakerA);
-          return {
-            no: r.no.trim(),
-            name: r.name.trim(),
-            system: r.system as WiringSystem,
-            useVoltage: num(r.useVoltage)!,
-            ...(b !== undefined ? { breakerA: b } : {}),
-          };
-        }),
+        panels: included.map((pn) => ({
+          panel: { name: pn.name.trim(), location: pn.location.trim() },
+          circuits: pn.rows.map((r) => {
+            const b = num(r.breakerA);
+            return {
+              no: r.no.trim(),
+              name: r.name.trim(),
+              system: r.system as WiringSystem,
+              useVoltage: num(r.useVoltage)!,
+              ...(b !== undefined ? { breakerA: b } : {}),
+            };
+          }),
+        })),
       });
-      navigate(`/reports/${report.id}`);
+      // 盤が複数なら一覧へ（作った報告書が並ぶ）、1つならその報告書へ
+      navigate(reports.length === 1 ? `/reports/${reports[0]!.id}` : '/');
     } catch (e) {
       setError((e as Error).message);
       setSaving(false);
@@ -191,31 +223,66 @@ export function ConfirmPage({ id, auto }: { id: string; auto: boolean }) {
       <div className="confirm-split">
         <SourceViewer rec={rec} />
         <div className="confirm-right">
+          {panels.length > 1 && (
+            <div className="panel-tabs" role="tablist">
+              {panels.map((pn, i) => (
+                <button
+                  key={pn.pid}
+                  role="tab"
+                  className={`${i === cur ? 'active' : ''} ${!pn.include ? 'excluded' : ''}`}
+                  onClick={() => setCur(i)}
+                  title={pn.name}
+                >
+                  {pn.name || `（盤${i + 1}）`}
+                  <small>
+                    {pn.rows.length}回路{uncOf(pn) > 0 && <span className="unc-count"> 要確認{uncOf(pn)}</span>}
+                    {allErrors[i]!.rowErrors.some((e) => e.length) && pn.include && <span className="err-count"> 入力不足</span>}
+                  </small>
+                </button>
+              ))}
+            </div>
+          )}
+          {panels.length > 1 && !confirmed && (
+            <p className="muted small">
+              この資料には盤が {panels.length} 面あります。盤ごとのタブで内容を確認してください。
+              「新しい報告書」では、チェックを入れた盤の数だけ報告書を作ります。
+            </p>
+          )}
+          {!panel ? (
+            <p className="warn">読み取り結果がありません。「読み取り開始」を押してください。</p>
+          ) : (
+          <>
+          {panels.length > 1 && !confirmed && (
+            <label className="check include">
+              <input type="checkbox" checked={panel.include} onChange={(e) => setPanel({ include: e.target.checked })} />
+              この盤を報告書に反映する
+            </label>
+          )}
           <fieldset>
             <legend>盤</legend>
-            <label className={uncCls(panelUnc.name)} title={panelUnc.name}>
+            <label className={uncCls(panel.unc.name)} title={panel.unc.name}>
               盤名
               <input
                 value={panel.name}
                 disabled={confirmed}
                 onChange={(e) => {
-                  setPanel({ ...panel, name: e.target.value });
-                  setPanelUnc(({ name: _n, ...rest }) => rest);
+                  const { name: _n, ...unc } = panel.unc;
+                  setPanel({ name: e.target.value, unc });
                 }}
               />
-              {panelUnc.name && <small>要確認: {panelUnc.name}</small>}
+              {panel.unc.name && <small>要確認: {panel.unc.name}</small>}
             </label>
-            <label className={uncCls(panelUnc.location)} title={panelUnc.location}>
+            <label className={uncCls(panel.unc.location)} title={panel.unc.location}>
               設置場所
               <input
                 value={panel.location}
                 disabled={confirmed}
                 onChange={(e) => {
-                  setPanel({ ...panel, location: e.target.value });
-                  setPanelUnc(({ location: _l, ...rest }) => rest);
+                  const { location: _l, ...unc } = panel.unc;
+                  setPanel({ location: e.target.value, unc });
                 }}
               />
-              {panelUnc.location && <small>要確認: {panelUnc.location}</small>}
+              {panel.unc.location && <small>要確認: {panel.unc.location}</small>}
             </label>
           </fieldset>
 
@@ -263,12 +330,12 @@ export function ConfirmPage({ id, auto }: { id: string; auto: boolean }) {
                             onClick={() => {
                               const next = [...rows];
                               next.splice(i + 1, 0, toRow({ no: null, name: null, system: r.system || null, useVoltage: num(r.useVoltage) ?? null, breakerA: null }, {}));
-                              setRows(next);
+                              setRows(() => next);
                             }}
                           >
                             ＋
                           </button>
-                          <button tabIndex={-1} className="danger" title="削除" onClick={() => setRows(rows.filter((x) => x.rid !== r.rid))}>
+                          <button tabIndex={-1} className="danger" title="削除" onClick={() => setRows((rs) => rs.filter((x) => x.rid !== r.rid))}>
                             ×
                           </button>
                         </>
@@ -280,7 +347,7 @@ export function ConfirmPage({ id, auto }: { id: string; auto: boolean }) {
             </table>
             {!confirmed && (
               <div className="grid-footer">
-                <button onClick={() => setRows([...rows, toRow({ no: String(rows.length + 1), name: null, system: '1φ3W', useVoltage: DEFAULT_USE_VOLTAGE['1φ3W'], breakerA: null }, {})])}>
+                <button onClick={() => setRows((rs) => [...rs, toRow({ no: String(rows.length + 1), name: null, system: '1φ3W', useVoltage: DEFAULT_USE_VOLTAGE['1φ3W'], breakerA: null }, {})])}>
                   ＋ 回路を追加
                 </button>
                 <span className="muted">
@@ -290,7 +357,10 @@ export function ConfirmPage({ id, auto }: { id: string; auto: boolean }) {
             )}
           </div>
 
-          {!confirmed && (
+          </>
+          )}
+
+          {!confirmed && panel && (
             <fieldset className="confirm-actions">
               <legend>確定</legend>
               {rec.targetReportId ? (
@@ -311,16 +381,24 @@ export function ConfirmPage({ id, auto }: { id: string; auto: boolean }) {
                   )}
                 </>
               ) : (
-                <p>新しい報告書を作成します。</p>
-              )}
-              {hasErrors && (
-                <p className="error">
-                  {mode === 'new' && !panel.name.trim() ? '盤名を入力してください。' : ''}
-                  {rowErrors.map((e, i) => (e.length ? `${i + 1}行目: ${e.join('・')}を入力してください。` : '')).join(' ')}
+                <p>
+                  新しい報告書を作成します{included.length > 1 ? `（盤ごとに ${included.length} 件）` : ''}。
                 </p>
               )}
-              <button className="primary" disabled={hasErrors || saving || rows.length === 0 || running} onClick={confirm}>
-                {saving ? '反映中…' : `確定して報告書に反映（${rows.length}回路）`}
+              {needSingle && <p className="error">既存の報告書へ反映できるのは1つの盤だけです。反映する盤を1つだけ選んでください（盤ごとのタブの「この盤を報告書に反映する」）。</p>}
+              {hasErrors && (
+                <div className="error">
+                  {errorPanels.map((i) => (
+                    <div key={panels[i]!.pid}>
+                      {panels.length > 1 ? `「${panels[i]!.name || `盤${i + 1}`}」: ` : ''}
+                      {allErrors[i]!.nameMissing ? '盤名を入力してください。' : ''}
+                      {allErrors[i]!.rowErrors.map((e, r) => (e.length ? `${r + 1}行目: ${e.join('・')}を入力してください。` : '')).join(' ')}
+                    </div>
+                  ))}
+                </div>
+              )}
+              <button className="primary" disabled={hasErrors || needSingle || saving || totalCircuits === 0 || running} onClick={confirm}>
+                {saving ? '反映中…' : `確定して報告書に反映（${included.length}面・${totalCircuits}回路）`}
               </button>
             </fieldset>
           )}
@@ -334,6 +412,7 @@ export function ConfirmPage({ id, auto }: { id: string; auto: boolean }) {
 function SourceViewer({ rec }: { rec: ImportRecord }) {
   const [page, setPage] = useState(0);
   const [zoom, setZoom] = useState(0); // 0 = 幅に合わせる
+  const [rot, setRot] = useState<Record<number, number>>({}); // ページごとの表示の回転（度）。読み取りには影響しない
   const p = rec.pages[page];
   if (!p) return <div className="viewer">ページがありません</div>;
   return (
@@ -357,16 +436,35 @@ function SourceViewer({ rec }: { rec: ImportRecord }) {
         <span>{zoom ? `${Math.round(zoom * 100)}%` : '幅'}</span>
         <button onClick={() => setZoom(Math.min(4, (zoom || 1) * 1.25))}>＋</button>
         <button onClick={() => setZoom(0)}>幅に合わせる</button>
+        <button title="左に90度回転（表示だけ。読み取りには影響しません）" onClick={() => setRot({ ...rot, [page]: ((rot[page] ?? 0) + 270) % 360 })}>↺</button>
+        <button title="右に90度回転（表示だけ。読み取りには影響しません）" onClick={() => setRot({ ...rot, [page]: ((rot[page] ?? 0) + 90) % 360 })}>↻</button>
         <a href={`/api/imports/${rec.id}/files/${p.fileIndex}`} target="_blank" rel="noreferrer">
           元ファイル
         </a>
       </div>
       <div className="viewer-body">
-        <img
-          src={`/api/imports/${rec.id}/pages/${p.index}`}
-          alt={`${p.fileName} ${p.pageNo}ページ`}
-          style={zoom ? { width: `${p.width * zoom}px`, maxWidth: 'none' } : { width: '100%' }}
-        />
+        {(() => {
+          const deg = rot[page] ?? 0;
+          const sideways = deg === 90 || deg === 270;
+          const dispW = sideways ? p.height : p.width;
+          const dispH = sideways ? p.width : p.height;
+          return (
+            <div
+              className="rot-box"
+              style={{
+                width: zoom ? `${dispW * zoom}px` : '100%',
+                aspectRatio: `${dispW} / ${dispH}`,
+                maxWidth: zoom ? 'none' : undefined,
+              }}
+            >
+              <img
+                src={`/api/imports/${rec.id}/pages/${p.index}`}
+                alt={`${p.fileName} ${p.pageNo}ページ`}
+                style={{ width: `calc(100cqw * ${p.width} / ${dispW})`, transform: `translate(-50%, -50%) rotate(${deg}deg)` }}
+              />
+            </div>
+          );
+        })()}
       </div>
     </div>
   );

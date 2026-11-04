@@ -93,7 +93,7 @@ export const api = {
   getImport: (id: string) => call<ImportRecord>(`/api/imports/${id}`),
   extract: (id: string) => call<ImportRecord>(`/api/imports/${id}/extract`, { method: 'POST', body: '{}' }),
   confirmImport: (id: string, body: ConfirmBody) =>
-    call<Report>(`/api/imports/${id}/confirm`, { method: 'POST', body: JSON.stringify(body) }),
+    call<{ reports: Report[] }>(`/api/imports/${id}/confirm`, { method: 'POST', body: JSON.stringify(body) }),
   readMegger: (fd: FormData) => upload<MeggerReading>('/api/megger', fd),
 
   getSettings: () => call<SettingsResponse>('/api/settings'),

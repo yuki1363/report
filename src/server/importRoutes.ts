@@ -1,5 +1,6 @@
 /** 取込・読み取り・確定の API（CLAUDE.md §4, §9-2）。 */
 import type { Hono } from 'hono';
+import type { Report } from '../shared/schema.ts';
 import { randomUUID } from 'node:crypto';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -135,24 +136,29 @@ export function registerImportRoutes(app: Hono, store: Store, dataDir: string, e
     }
   });
 
-  /** 利用者の確認を経た内容で報告書を作成・更新する。 */
+  /**
+   * 利用者の確認を経た内容で報告書を作成・更新する。
+   * new: 盤ごとに新しい報告書を作る（盤が複数ならその数だけ） / append・replace: 既存報告書へ反映（盤は1つだけ）
+   */
   app.post('/api/imports/:id/confirm', async (c) => {
     const rec = store.getImport(c.req.param('id'));
     if (!rec) return c.json({ error: 'not found' }, 404);
     if (rec.status === 'confirmed') return c.json({ error: 'この取込は確定済みです' }, 409);
     const body = ConfirmBodySchema.parse(await c.req.json());
-    let base;
-    if (body.mode === 'new') {
-      base = newReport();
-    } else {
-      base = body.targetReportId ? store.getReport(body.targetReportId) : undefined;
-      if (!base) return c.json({ error: '対象の報告書が見つかりません' }, 404);
-    }
     const source = rec.engine === 'ocr' ? 'ocr' : rec.engine === 'ai' ? 'ai' : 'manual';
     const files = rec.files.map((f) => `imports/${rec.id}/${f.stored}`);
-    const report = store.saveReport(applyConfirmation(base, body, source, files, randomUUID));
-    store.saveImport({ ...rec, status: 'confirmed', confirmedReportId: report.id });
-    return c.json(report);
+    const reports: Report[] = [];
+    if (body.mode === 'new') {
+      for (const p of body.panels) {
+        reports.push(store.saveReport(applyConfirmation(newReport(), { ...p, mode: 'new', applyPanel: true }, source, files, randomUUID)));
+      }
+    } else {
+      const base = body.targetReportId ? store.getReport(body.targetReportId) : undefined;
+      if (!base) return c.json({ error: '対象の報告書が見つかりません' }, 404);
+      reports.push(store.saveReport(applyConfirmation(base, { ...body.panels[0]!, mode: body.mode, applyPanel: body.applyPanel }, source, files, randomUUID)));
+    }
+    store.saveImport({ ...rec, status: 'confirmed', confirmedReportId: reports[0]!.id });
+    return c.json({ reports });
   });
 
   /** P4（実験的）: メガー表示写真の読み取り。外部 AI 読み取りが ON のときだけ使える。 */
