@@ -3,23 +3,34 @@
  *
  * 列の順: 回路No ／ 回路名称 ／ 電気方式 ／ 使用電圧 ／ ブレーカ容量(AT)
  * - 区切りはタブ（Excel からのコピー）か、2つ以上の空白
- * - 電気方式・使用電圧が空欄または列が無い場合は、既定値（画面で指定）を使う
+ * - 電気方式と使用電圧は連動する（1φ2W=105 ／ 1φ3W=105/210 ／ 3φ3W=210 か 440）
+ *   - どちらか一方だけ書かれていれば、もう一方は連動して決まる
+ *   - どちらも空欄・列なしなら、既定の電圧（画面で指定）から決まる
  * - 1行目が見出し（「No」「回路」「負荷」を含む）なら読み飛ばす
  */
-import type { WiringSystem } from '../shared/schema.ts';
+import { SELECTABLE_SYSTEMS, type WiringSystem } from '../shared/schema.ts';
 import { LOW_VOLTAGE_MAX_V } from './judgment.ts';
-import { patternOf, VOLTAGE_PATTERN_TEXT } from './voltagePattern.ts';
-import { normalizeSystem, parseVoltage, toHalf, voltageLabel } from './system.ts';
+import { normalizeSystem, parseVoltage, toHalf } from './system.ts';
+import {
+  allowedTogether,
+  patternForSystem,
+  patternOfText,
+  patternsOfSystem,
+  SYSTEM_OF_PATTERN,
+  VOLTAGE_PATTERN_TEXT,
+  VOLTAGE_PATTERNS,
+  type VoltagePattern,
+} from './voltagePattern.ts';
 
 export interface PastedCircuit {
   no: string;
   name: string;
   system: WiringSystem;
   useVoltage: number;
-  /** 「105/210」のように書かれていたときの表記 */
+  /** 「105/210」のように、帳票に出す電圧の表記 */
   voltageLabel?: string;
   breakerA?: number;
-  /** 既定値を使った項目（画面で薄く表示する） */
+  /** 既定値（または連動）で決めた項目（画面で薄く表示する） */
   defaulted: ('system' | 'useVoltage')[];
 }
 
@@ -31,12 +42,11 @@ export interface PasteResult {
 }
 
 export interface PasteDefaults {
-  system: WiringSystem;
-  useVoltage: number;
-  /** 既定の電圧を「105/210」のように書いたときの表記 */
-  voltageLabel?: string;
+  /** 既定の電圧パターン（105 / 105/210 / 210 / 440） */
+  voltage: string;
 }
 
+const SYSTEM_TEXT = SELECTABLE_SYSTEMS.join(' / ');
 const HEADER_RE = /^(No\.?|回路|負荷|ELB|MCB|番号)/i;
 
 function splitLine(line: string): string[] {
@@ -54,6 +64,7 @@ const toNumber = (s: string): number | undefined => {
 export function parsePastedCircuits(text: string, defaults: PasteDefaults): PasteResult {
   const lines = text.replace(/\r\n?/g, '\n').split('\n');
   const result: PasteResult = { circuits: [], errors: [], skippedHeader: false };
+  const defaultPattern: VoltagePattern = VOLTAGE_PATTERNS.find((p) => p.value === defaults.voltage) ?? VOLTAGE_PATTERNS[2]!;
   let first = true;
   lines.forEach((raw, idx) => {
     if (!raw.trim()) return;
@@ -65,29 +76,57 @@ export function parsePastedCircuits(text: string, defaults: PasteDefaults): Past
         return;
       }
     }
+    const fail = (reason: string) => result.errors.push({ line: idx + 1, text: raw.trim(), reason });
     // 回路名称の1列だけが貼られた場合（番号なし）は、番号を自動で振る
     const onlyName = cells.length === 1;
     const no = onlyName ? String(result.circuits.length + 1) : (cells[0] ?? '');
     const name = onlyName ? (cells[0] ?? '') : (cells[1] ?? '');
-    const sysText = cells[2] ?? '';
-    const system = sysText ? normalizeSystem(sysText) : defaults.system;
-    const voltText = cells[3] ?? '';
-    const volt = voltText ? parseVoltage(voltText) : defaults.useVoltage;
-    const at = cells[4] ? toNumber(cells[4]) : undefined;
-    const fail = (reason: string) => result.errors.push({ line: idx + 1, text: raw.trim(), reason });
     if (!name && !no) return fail('回路No・回路名称が空です');
-    if (system === null) return fail(`電気方式「${sysText}」を判別できません（1φ2W / 1φ3W / 3φ3W / 3φ4W）`);
-    if (volt === undefined || Number.isNaN(volt) || volt <= 0) return fail(`使用電圧「${voltText}」が数値ではありません`);
-    if (volt > LOW_VOLTAGE_MAX_V) return fail(`使用電圧 ${volt}V は低圧（${LOW_VOLTAGE_MAX_V}V 以下）の範囲外です`);
-    const label = voltText ? voltageLabel(voltText) : defaults.voltageLabel;
-    if (!patternOf(volt, label)) return fail(`電圧「${voltText || defaults.voltageLabel || defaults.useVoltage}」は ${VOLTAGE_PATTERN_TEXT} のいずれかにしてください`);
+
+    const sysText = cells[2] ?? '';
+    const voltText = cells[3] ?? '';
+    const at = cells[4] ? toNumber(cells[4]) : undefined;
+
+    // 電気方式
+    let system: WiringSystem | undefined;
+    if (sysText) {
+      const s = normalizeSystem(sysText);
+      if (s === null || !(SELECTABLE_SYSTEMS as readonly string[]).includes(s)) {
+        return fail(`電気方式「${sysText}」は使えません（${SYSTEM_TEXT}）`);
+      }
+      system = s;
+    }
+    // 使用電圧
+    let pattern: VoltagePattern | undefined;
+    if (voltText) {
+      const v = parseVoltage(voltText);
+      if (v === undefined || Number.isNaN(v) || v <= 0) return fail(`使用電圧「${voltText}」が数値ではありません`);
+      if (v > LOW_VOLTAGE_MAX_V) return fail(`使用電圧 ${v}V は低圧（${LOW_VOLTAGE_MAX_V}V 以下）の範囲外です`);
+      pattern = patternOfText(voltText);
+      if (!pattern) return fail(`電圧「${voltText}」は ${VOLTAGE_PATTERN_TEXT} のいずれかにしてください`);
+    }
+    // 連動
+    if (system && pattern) {
+      if (!allowedTogether(system, pattern)) {
+        const ok = patternsOfSystem(system).map((p) => p.value).join(' または ');
+        return fail(`電気方式 ${system} で選べる電圧は ${ok} です（「${voltText}」は選べません）`);
+      }
+    } else if (system) {
+      pattern = patternForSystem(system, defaultPattern); // 方式だけ → 既定の電圧が合えばそれ、合わなければ方式の既定
+    } else if (pattern) {
+      system = SYSTEM_OF_PATTERN[pattern.value]!; // 電圧だけ → 方式が決まる
+    } else {
+      pattern = defaultPattern; // どちらも空欄 → 既定の電圧から
+      system = SYSTEM_OF_PATTERN[pattern.value]!;
+    }
     if (at !== undefined && (Number.isNaN(at) || at < 0)) return fail(`ブレーカ容量「${cells[4]}」が数値ではありません`);
+
     result.circuits.push({
       no,
       name,
-      system,
-      useVoltage: volt,
-      ...(voltText ? (voltageLabel(voltText) ? { voltageLabel: voltageLabel(voltText)! } : {}) : defaults.voltageLabel ? { voltageLabel: defaults.voltageLabel } : {}),
+      system: system!,
+      useVoltage: pattern!.useVoltage,
+      ...(pattern!.label ? { voltageLabel: pattern!.label } : {}),
       ...(at !== undefined ? { breakerA: at } : {}),
       defaulted: [...(sysText ? [] : (['system'] as const)), ...(voltText ? [] : (['useVoltage'] as const))],
     });

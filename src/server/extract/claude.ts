@@ -9,7 +9,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { ExtractionSchema, mergeExtractions, type Extraction, type ImportPage } from '../../shared/extraction.ts';
-import { WIRING_SYSTEMS } from '../../shared/schema.ts';
+import { SELECTABLE_SYSTEMS } from '../../shared/schema.ts';
 
 export const DEFAULT_MODEL = 'claude-sonnet-5-5';
 /** 1回のリクエストで送るページ数の上限（これを超える場合は分割して結果をまとめる） */
@@ -63,7 +63,7 @@ export const EXTRACTION_JSON_SCHEMA = {
               properties: {
                 no: nullable({ type: 'string' }),
                 name: nullable({ type: 'string' }),
-                system: nullable({ type: 'string', enum: [...WIRING_SYSTEMS] }),
+                system: nullable({ type: 'string', enum: [...SELECTABLE_SYSTEMS] }),
                 useVoltage: nullable({ type: 'number' }),
                 voltageText: nullable({ type: 'string' }),
                 breakerA: nullable({ type: 'number' }),
@@ -101,8 +101,8 @@ panels: 盤ごとに1要素。1つの資料に盤が複数並んでいる場合�
   - 「ELB No.」「ブレーカNo.」「回路No.」「MCB No.」→ no（資料の表記のまま文字列）
   - 「AT」（トリップ電流）→ breakerA。「AF」（フレーム）や「P」（極数）は使いません。AT が空欄なら breakerA は null
 - 電気方式と電圧（例: 「3φ3W 210V」「3φ3W 440V」）が、表の端に1回だけ書かれて複数の回路に共通している場合は、その範囲のすべての回路に system と useVoltage を入れてください。表の途中で区画が変わり別の方式・電圧が書かれている場合は、区画ごとに適用します。
-- useVoltage は数値 [V] にします。「105/210V」のように2つ書かれている場合は大きい方です（210）。voltageText には、資料に書かれた電圧の表記を、V を除いてそのまま入れます（例: 「105/210」「210」「440」「105」）。このアプリが扱う電圧は 105 / 105/210 / 210 / 440 の4種類です。資料の電圧がこれらと違う場合（例: 100/200V）は、そのまま書き写し、uncertain に「パターン外」と記録してください。
-- 電気方式は 1φ2W / 1φ3W / 3φ3W / 3φ4W のどれかに直してください（例: 1Φ3W、1ファイ3、単相3線、1P3W → 1φ3W、三相3線 → 3φ3W）。判断できなければ null です。
+- useVoltage は数値 [V] にします。「105/210V」のように2つ書かれている場合は大きい方です（210）。voltageText には、資料に書かれた電圧の表記を、V を除いてそのまま入れます（例: 「105/210」「210」「440」「105」）。このアプリが扱う電圧は 105 / 105/210 / 210 / 440 の4種類で、3φ4W は扱いません。資料の電圧がこれらと違う場合（例: 100/200V）は、そのまま書き写し、uncertain に「パターン外」と記録してください。
+- 電気方式は 1φ2W / 1φ3W / 3φ3W のどれかに直してください（例: 1Φ3W、1ファイ3、単相3線、1P3W → 1φ3W、三相3線 → 3φ3W）。判断できなければ null です。電気方式と電圧は連動します（1φ2W=105 ／ 1φ3W=105/210 ／ 3φ3W=210 か 440）。資料がこの組み合わせでないときは、書かれたまま写して uncertain に記録してください。
 - 表の下段などに別の区画（MCB など、見出しが「MCB No.」「MCB AF/AT」になっているブロック）がある場合も、その行を回路として含めます。区画に別の電気方式・電圧が書かれていればそれを、書かれていなければ null にして uncertain に記録してください。
 - このアプリは低圧（使用電圧 600V 以下）の測定だけが対象です。高圧（6.6kV など 600V を超える）の機器・回路は、回路に含めないでください。判断に迷う場合は含めたうえで、uncertain に「高圧の可能性」と記録してください。
 - 「予備」「スペース」の行も1回路として含めます（名称は資料の表記のまま）。回路は資料に現れる順に並べ、重複して書かないでください。

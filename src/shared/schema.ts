@@ -108,6 +108,8 @@ export type Template = z.infer<typeof TemplateSchema>;
 
 export const WIRING_SYSTEMS = ['1φ2W', '1φ3W', '3φ3W', '3φ4W'] as const;
 export const WiringSystemSchema = z.enum(WIRING_SYSTEMS);
+/** 画面で選べる電気方式（3φ4W は使わないため選択肢から外す。以前のデータを読めるよう型には残す） */
+export const SELECTABLE_SYSTEMS = ['1φ2W', '1φ3W', '3φ3W'] as const;
 export type WiringSystem = z.infer<typeof WiringSystemSchema>;
 
 export const TEST_VOLTAGES = [125, 250, 500] as const;

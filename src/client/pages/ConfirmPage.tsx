@@ -2,9 +2,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { DEFAULT_USE_VOLTAGE } from '../../domain/groundVoltage.ts';
 import { LOW_VOLTAGE_MAX_V } from '../../domain/judgment.ts';
 import { parseVoltage } from '../../domain/system.ts';
-import { patternOfText, VOLTAGE_PATTERNS, VOLTAGE_PATTERN_TEXT } from '../../domain/voltagePattern.ts';
+import { allowedTogether, patternFor, patternForSystem, patternOfText, SYSTEM_OF_PATTERN, VOLTAGE_PATTERNS, VOLTAGE_PATTERN_TEXT } from '../../domain/voltagePattern.ts';
 import type { ExtractedCircuit, ImportRecord } from '../../shared/extraction.ts';
-import { WIRING_SYSTEMS, type WiringSystem } from '../../shared/schema.ts';
+import { SELECTABLE_SYSTEMS, type WiringSystem } from '../../shared/schema.ts';
 import { api } from '../api.ts';
 import { navigate } from '../nav.ts';
 
@@ -34,7 +34,7 @@ const toRow = (c: ExtractedCircuit, unc: Row['unc']): Row => ({
   rid: ridSeq++,
   no: c.no ?? '',
   name: c.name ?? '',
-  system: c.system ?? '',
+  system: c.system && c.system !== '3φ4W' ? c.system : '',
   // 資料の表記が「105/210」などパターンに合えばそれを使う。なければ数値
   useVoltage: patternOfText(c.voltageText ?? '')?.value ?? (c.useVoltage === null ? '' : String(c.useVoltage)),
   breakerA: c.breakerA === null ? '' : String(c.breakerA),
@@ -130,6 +130,7 @@ export function ConfirmPage({ id, auto }: { id: string; auto: boolean }) {
       if (v === undefined || Number.isNaN(v) || v <= 0) e.push('使用電圧');
       else if (v > LOW_VOLTAGE_MAX_V) e.push(`使用電圧（低圧は${LOW_VOLTAGE_MAX_V}V以下。高圧の回路は外してください）`);
       else if (!patternOfText(r.useVoltage)) e.push(`使用電圧（${VOLTAGE_PATTERN_TEXT} から選択）`);
+      else if (r.system && !allowedTogether(r.system, patternOfText(r.useVoltage)!)) e.push('電気方式と使用電圧の組み合わせ（1φ2W=105 ／ 1φ3W=105/210 ／ 3φ3W=210か440）');
       const b = num(r.breakerA);
       if (b !== undefined && (Number.isNaN(b) || b < 0)) e.push('ブレーカ容量');
       return e;
@@ -315,15 +316,23 @@ export function ConfirmPage({ id, auto }: { id: string; auto: boolean }) {
                       <input className="name" value={r.name} disabled={confirmed} onChange={(e) => setRow(r.rid, { name: e.target.value }, 'name')} />
                     </td>
                     <td className={uncCls(r.unc.system)} title={r.unc.system}>
-                      <select value={r.system} disabled={confirmed} onChange={(e) => setRow(r.rid, { system: e.target.value as WiringSystem }, 'system')}>
+                      <select value={r.system} disabled={confirmed} onChange={(e) => {
+                        // 電気方式を選ぶと、電圧が合わなければその方式の既定の電圧にする（連動）
+                        const system = e.target.value as WiringSystem;
+                        setRow(r.rid, { system, useVoltage: patternForSystem(system, patternOfText(r.useVoltage)).value }, 'system');
+                      }}>
                         <option value="">（未選択）</option>
-                        {WIRING_SYSTEMS.map((s) => (
+                        {SELECTABLE_SYSTEMS.map((s) => (
                           <option key={s}>{s}</option>
                         ))}
                       </select>
                     </td>
                     <td className={uncCls(r.unc.useVoltage)} title={r.unc.useVoltage}>
-                      <select className="volt" value={patternOfText(r.useVoltage)?.value ?? ''} disabled={confirmed} onChange={(e) => setRow(r.rid, { useVoltage: e.target.value }, 'useVoltage')}>
+                      <select className="volt" value={patternOfText(r.useVoltage)?.value ?? ''} disabled={confirmed} onChange={(e) => {
+                        // 電圧を選ぶと、電気方式も自動で決まる（連動）
+                        const sys = SYSTEM_OF_PATTERN[e.target.value];
+                        setRow(r.rid, { useVoltage: e.target.value, ...(sys ? { system: sys } : {}) }, 'useVoltage');
+                      }}>
                         <option value="">{r.useVoltage ? `（${r.useVoltage}）要選択` : '（選択）'}</option>
                         {VOLTAGE_PATTERNS.map((p) => (
                           <option key={p.value}>{p.value}</option>

@@ -1,28 +1,20 @@
 /** 回路をまとめて貼り付けて追加する（Excel などからコピーした表をそのまま貼れる） */
 import { useMemo, useState } from 'react';
 import { parsePastedCircuits, type PastedCircuit } from '../domain/pasteCircuits.ts';
-import { patternFor, VOLTAGE_PATTERNS, VOLTAGE_PATTERN_TEXT } from '../domain/voltagePattern.ts';
-import { WIRING_SYSTEMS, type WiringSystem } from '../shared/schema.ts';
+import { SYSTEM_OF_PATTERN, VOLTAGE_PATTERNS, VOLTAGE_PATTERN_TEXT } from '../domain/voltagePattern.ts';
 
 export function PasteDialog({
-  defaultSystem,
   defaultVoltage,
   onApply,
   onClose,
 }: {
-  defaultSystem: WiringSystem;
   defaultVoltage: string;
   onApply: (circuits: PastedCircuit[]) => void;
   onClose: () => void;
 }) {
   const [text, setText] = useState('');
-  const [system, setSystem] = useState<WiringSystem>(defaultSystem);
   const [volt, setVolt] = useState(defaultVoltage);
-  const pat = patternFor(volt) ?? VOLTAGE_PATTERNS[2]!;
-  const result = useMemo(
-    () => parsePastedCircuits(text, { system, useVoltage: pat.useVoltage, ...(pat.label ? { voltageLabel: pat.label } : {}) }),
-    [text, system, pat.useVoltage, pat.label],
-  );
+  const result = useMemo(() => parsePastedCircuits(text, { voltage: volt }), [text, volt]);
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -31,19 +23,11 @@ export function PasteDialog({
         <p className="muted small">
           Excel などの表をコピーして、下の欄に貼り付けてください。列の順は
           <strong>「回路No ／ 回路名称 ／ 電気方式 ／ 使用電圧 ／ ブレーカ容量(AT)」</strong>です。
-          電気方式・使用電圧・ブレーカ容量は空欄や列なしでも構いません（空欄は下の既定値を使います）。使用電圧は {VOLTAGE_PATTERN_TEXT} のいずれかです。名称だけの貼り付けも可能です（番号は自動）。
+          電気方式・使用電圧・ブレーカ容量は空欄や列なしでも構いません。電気方式と使用電圧は連動します（1φ2W=105 ／ 1φ3W=105/210 ／ 3φ3W=210 か 440）。どちらか一方を書けば、もう一方は自動で決まります。どちらも空欄なら下の既定の電圧を使います。使用電圧は {VOLTAGE_PATTERN_TEXT} のいずれかです。名称だけの貼り付けも可能です（番号は自動）。
         </p>
         <div className="row">
           <label>
-            既定の電気方式
-            <select value={system} onChange={(e) => setSystem(e.target.value as WiringSystem)}>
-              {WIRING_SYSTEMS.map((s) => (
-                <option key={s}>{s}</option>
-              ))}
-            </select>
-          </label>
-          <label>
-            既定の使用電圧[V]
+            既定の使用電圧[V]（電気方式は電圧から決まります: {SYSTEM_OF_PATTERN[volt]}）
             <select value={volt} onChange={(e) => setVolt(e.target.value)}>
               {VOLTAGE_PATTERNS.map((p) => (
                 <option key={p.value}>{p.value}</option>

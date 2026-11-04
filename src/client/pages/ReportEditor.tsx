@@ -4,7 +4,7 @@ import { autoGroundVoltage, DEFAULT_USE_VOLTAGE } from '../../domain/groundVolta
 import { defaultTestVoltage } from '../../domain/importing.ts';
 import { newCircuit } from '../../domain/newCircuit.ts';
 import { parseVoltage } from '../../domain/system.ts';
-import { patternFor, patternOf, VOLTAGE_PATTERNS, type VoltagePattern } from '../../domain/voltagePattern.ts';
+import { applySystem, applyVoltagePattern, patternFor, patternOf, VOLTAGE_PATTERNS, type VoltagePattern } from '../../domain/voltagePattern.ts';
 import { isLowVoltage, LOW_VOLTAGE_MAX_V } from '../../domain/judgment.ts';
 import { judgeCircuit, VERDICT_LABEL, type Verdict } from '../../domain/judgment.ts';
 import { formatReading, parseReading } from '../../domain/reading.ts';
@@ -12,7 +12,7 @@ import {
   READING_KEYS,
   READING_LABELS,
   TEST_VOLTAGES,
-  WIRING_SYSTEMS,
+  SELECTABLE_SYSTEMS,
   type Circuit,
   type ReadingKey,
   type Report,
@@ -320,7 +320,6 @@ export function ReportEditor({ id }: { id: string }) {
       )}
       {pasting && (
         <PasteDialog
-          defaultSystem={report.circuits.at(-1)?.system ?? '1φ3W'}
           defaultVoltage={(() => { const l = report.circuits.at(-1); return (l && patternOf(l.useVoltage, l.voltageLabel)?.value) || '210'; })()}
           onClose={() => setPasting(false)}
           onApply={(list: PastedCircuit[]) => {
@@ -672,12 +671,10 @@ function CircuitGrid({
                   <select
                     value={c.system}
                     {...cellProps(i, 'system')}
-                    onChange={(e) => {
-                      const system = e.target.value as WiringSystem;
-                      updateCircuit(c.id, (x) => ({ ...x, system, groundVoltage: autoGroundVoltage(system, x.useVoltage) }));
-                    }}
+                    onChange={(e) => updateCircuit(c.id, (x) => applySystem(x, e.target.value as WiringSystem))}
                   >
-                    {WIRING_SYSTEMS.map((s) => (
+                    {c.system === '3φ4W' && <option>3φ4W</option>}
+                    {SELECTABLE_SYSTEMS.map((s) => (
                       <option key={s}>{s}</option>
                     ))}
                   </select>
@@ -687,12 +684,7 @@ function CircuitGrid({
                     className={`volt ${isLowVoltage(c.useVoltage) ? '' : 'invalid'}`}
                     circuit={c}
                     {...cellProps(i, 'useVoltage')}
-                    onPick={(pat) =>
-                      updateCircuit(c.id, (x) => {
-                        const { voltageLabel: _l, ...rest } = x;
-                        return { ...rest, ...(pat.label ? { voltageLabel: pat.label } : {}), useVoltage: pat.useVoltage, groundVoltage: autoGroundVoltage(x.system, pat.useVoltage) };
-                      })
-                    }
+                    onPick={(pat) => updateCircuit(c.id, (x) => applyVoltagePattern(x, pat))}
                   />
                 </td>
                 {showVolt && (

@@ -32,3 +32,30 @@ describe('電圧パターン 105 / 105/210 / 210 / 440', () => {
     expect(DEFAULT_USE_VOLTAGE).toEqual({ '1φ2W': 105, '1φ3W': 210, '3φ3W': 210, '3φ4W': 440 });
   });
 });
+
+import { allowedTogether, applySystem, applyVoltagePattern, patternForSystem, patternsOfSystem, SYSTEM_OF_PATTERN } from './voltagePattern.ts';
+
+const base = { system: '1φ3W' as const, useVoltage: 210, voltageLabel: '105/210', groundVoltage: 105 };
+
+describe('電圧と電気方式の連動', () => {
+  it('電気方式ごとに選べる電圧（3φ3W は 210 と 440 の両方）', () => {
+    expect(patternsOfSystem('1φ2W').map((p) => p.value)).toEqual(['105']);
+    expect(patternsOfSystem('1φ3W').map((p) => p.value)).toEqual(['105/210']);
+    expect(patternsOfSystem('3φ3W').map((p) => p.value)).toEqual(['210', '440']);
+    expect(Object.keys(SYSTEM_OF_PATTERN).sort()).toEqual(['105', '105/210', '210', '440'].sort());
+    expect(allowedTogether('3φ3W', patternFor('440')!)).toBe(true);
+    expect(allowedTogether('1φ3W', patternFor('440')!)).toBe(false);
+  });
+  it('電圧を選ぶと電気方式が決まり、対地電圧・表記も更新される', () => {
+    expect(applyVoltagePattern(base, patternFor('105')!)).toEqual({ system: '1φ2W', useVoltage: 105, groundVoltage: 105 });
+    expect(applyVoltagePattern(base, patternFor('440')!)).toEqual({ system: '3φ3W', useVoltage: 440, groundVoltage: 440 });
+    expect(applyVoltagePattern({ system: '3φ3W', useVoltage: 440, groundVoltage: 440 }, patternFor('105/210')!)).toEqual(base);
+  });
+  it('電気方式を選ぶと、電圧が合わなければ既定に、合えば残す（3φ3W の 440 は残る）', () => {
+    expect(applySystem(base, '3φ3W')).toMatchObject({ system: '3φ3W', useVoltage: 210, groundVoltage: 210 });
+    expect(applySystem({ system: '3φ3W', useVoltage: 440, groundVoltage: 440 }, '3φ3W')).toMatchObject({ useVoltage: 440 });
+    expect(applySystem({ system: '3φ3W', useVoltage: 440, groundVoltage: 440 }, '1φ2W')).toEqual({ system: '1φ2W', useVoltage: 105, groundVoltage: 105 });
+    expect(applySystem({ system: '3φ3W', useVoltage: 210, groundVoltage: 210 }, '1φ3W')).toEqual(base);
+    expect(patternForSystem('3φ3W', patternFor('105')!).value).toBe('210');
+  });
+});
