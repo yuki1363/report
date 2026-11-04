@@ -78,11 +78,18 @@ function withPattern<T extends VoltageFields>(c: T, system: WiringSystem, pat: V
 
 /** 電圧を選んだとき: 電気方式も自動で決まる */
 export function applyVoltagePattern<T extends VoltageFields>(c: T, pat: VoltagePattern): T {
-  return withPattern(c, SYSTEM_OF_PATTERN[pat.value] ?? c.system, pat);
+  return withPattern(c, SYSTEM_OF_PATTERN[pat.value] ?? (c.system || '3φ3W'), pat);
 }
 
-/** 電気方式を選んだとき: 電圧が合わなければ、その方式の既定の電圧にする */
-export function applySystem<T extends VoltageFields>(c: T, system: WiringSystem): T {
+/** 電気方式を空欄にしたとき: 使用電圧・対地電圧・表記も空欄（0）にする */
+export function applyBlank<T extends VoltageFields>(c: T): T {
+  const { voltageLabel: _l, ...rest } = c;
+  return { ...rest, system: '', useVoltage: 0, groundVoltage: 0 } as T;
+}
+
+/** 電気方式を選んだとき: 電圧が合わなければ、その方式の既定の電圧にする。空欄（''）なら電圧も空欄 */
+export function applySystem<T extends VoltageFields>(c: T, system: WiringSystem | ''): T {
+  if (system === '') return applyBlank(c);
   return withPattern(c, system, patternForSystem(system, patternOf(c.useVoltage, c.voltageLabel)));
 }
 
@@ -98,6 +105,7 @@ export function applySystem<T extends VoltageFields>(c: T, system: WiringSystem)
  * 何度かけても結果は同じ（冪等）。
  */
 export function normalizeLegacyVoltage<T extends VoltageFields>(c: T): T {
+  if (c.system === '') return c; // 空欄は直さない
   const system: WiringSystem = c.system === '3φ4W' ? '3φ3W' : c.system;
   const v = c.useVoltage;
   let pat: VoltagePattern | undefined;

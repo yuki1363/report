@@ -78,12 +78,11 @@ describe('generateSheet（repeatRegion 展開）', () => {
     const s = generateSheet(template.sheet, report(2));
     const row = 8; // 最初の回路行
     expect(s.cells[`${row},1`]!.value).toBe('動力1');
-    expect(s.cells[`${row},7`]!.value).toBe('50'); // RE
-    expect(s.cells[`${row},8`]!.value).toBe('-'); // SE (na)
-    expect(s.cells[`${row},11`]!.value).toBe('>2000'); // ALL_E
-    expect(s.cells[`${row},12`]!.value).toBe('50'); // 最小値
-    expect(s.cells[`${row},13`]!.value).toBe('0.2'); // 基準値
-    expect(s.cells[`${row},14`]!.value).toBe('良');
+    expect(s.cells[`${row},9`]!.value).toBe('50'); // RE
+    expect(s.cells[`${row},10`]!.value).toBe('-'); // SE (na)
+    expect(s.cells[`${row},13`]!.value).toBe('>2000'); // ALL_E
+    expect(s.cells[`${row},14`]!.value).toBe('0.2'); // 基準値
+    expect(s.cells[`${row},15`]!.value).toBe('良');
     expect(s.page.repeatHeaderRows).toEqual([6, 7]);
     // 備考欄は回路2件ぶん下にずれ、報告書の備考が入る。総合判定は帳票に載らない
     expect(s.cells['11,0']!.value).toBe('備考');
@@ -91,6 +90,19 @@ describe('generateSheet（repeatRegion 展開）', () => {
     expect(withNote.cells['11,2']!.value).toBe('東側の盤は来月再測定\n予備回路は未接続');
     expect(withNote.cells['11,2']!.style?.wrap).toBe(true);
     expect(JSON.stringify(withNote.cells)).not.toContain('総合判定');
+  });
+
+  it('既定テンプレート: 種別・容量が出る。最小値の列は無い。電気方式が空欄の回路は、使用電圧・基準値・判定も空欄', () => {
+    const r = report(2);
+    r.circuits[0] = { ...r.circuits[0]!, deviceType: 'MCB', breakerA: 225 };
+    r.circuits[1] = { ...r.circuits[1]!, system: '', useVoltage: 0, groundVoltage: 0 };
+    const s = generateSheet(template.sheet, r);
+    expect([s.cells['8,2']!.value, s.cells['8,3']!.value, s.cells['8,4']!.value]).toEqual(['MCB', '225', '3φ3W']);
+    expect(['9,2', '9,4', '9,5', '9,14', '9,15'].map((k) => s.cells[k]!.value)).toEqual(['', '', '', '', '']);
+    const heads = Object.values(s.cells).map((c) => c.value ?? '');
+    expect(heads).toContain('種別');
+    expect(heads).toContain('容量\n[A]');
+    expect(heads).not.toContain('最小値\n[MΩ]'); // 見出しに最小値は無い（注記の文章には「最小値」の語が残る）
   });
 
   it('既定テンプレートに、対地電圧・測定電圧・測定者・測定器は出ない', () => {

@@ -33,11 +33,11 @@ describe('電圧の入力', () => {
 
 describe('105/210V 1φ3W', () => {
   it('使用電圧 210V、対地電圧 105V、基準値 0.1MΩ', () => {
-    const r = parsePastedCircuits('1\t照明\t1ファイ3\t105/210\t20', { voltage: '210' });
+    const r = parsePastedCircuits('1\t照明\t\t20\t1ファイ3\t105/210', { voltage: '210' });
     expect(r.errors).toEqual([]);
     const c = r.circuits[0]!;
     expect(c).toMatchObject({ system: '1φ3W', useVoltage: 210, breakerA: 20 });
-    const ground = autoGroundVoltage(c.system, c.useVoltage);
+    const ground = autoGroundVoltage(c.system as '1φ3W', c.useVoltage);
     expect(ground).toBe(105);
     const j = judgeCircuit({ useVoltage: c.useVoltage, groundVoltage: ground, readings: { RE: { kind: 'value', mohm: 0.1 } } });
     expect(j.criterion.mohm).toBe(0.1);
@@ -56,7 +56,7 @@ describe('電圧の表記を残す', () => {
   it('貼り付けた表記が帳票の差し込み値になる（判定は大きい方の 210V）', async () => {
     const { generateSheet } = await import('./generate.ts');
     const { parsePastedCircuits } = await import('./pasteCircuits.ts');
-    const c = parsePastedCircuits('1\t照明\t1ファイ3\t105/210', { voltage: '210' }).circuits[0]!;
+    const c = parsePastedCircuits('1\t照明\t\t\t1ファイ3\t105/210', { voltage: '210' }).circuits[0]!;
     expect(c.voltageLabel).toBe('105/210');
     const sheet = generateSheet(
       { page: { size: 'A4', orientation: 'portrait', marginsMm: { t: 1, r: 1, b: 1, l: 1 } }, colWidthsMm: [10], rowHeightsMm: [5], cells: { '0,0': { value: '{{c.useVoltage}}' } }, merges: [], images: [], repeatRegion: { rowStart: 0, rowEnd: 0, source: 'circuits' } },

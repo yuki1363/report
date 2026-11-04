@@ -22,13 +22,13 @@ export function PasteDialog({
         <h2>回路を貼り付けて追加</h2>
         <p className="muted small">
           Excel などの表をコピーして、下の欄に貼り付けてください。列の順は
-          <strong>「回路No ／ 回路名称 ／ 電気方式 ／ 使用電圧 ／ ブレーカ容量(AT)」</strong>です。
-          電気方式・使用電圧・ブレーカ容量は空欄や列なしでも構いません。電気方式と使用電圧は連動します（1φ2W=105 ／ 1φ3W=105/210 ／ 3φ3W=210 か 440）。どちらか一方を書けば、もう一方は自動で決まります。どちらも空欄なら下の既定の電圧を使います。使用電圧は {VOLTAGE_PATTERN_TEXT} のいずれかです。名称だけの貼り付けも可能です（番号は自動）。
+                    列の順は<strong>「回路No ／ 回路名称 ／ 種別（ELB・MCB・Mg など） ／ 容量[A] ／ 電気方式 ／ 使用電圧」</strong>です。種別以降は、空欄や列なしでも構いません。電気方式と使用電圧は連動します（1φ2W=105 ／ 1φ3W=105/210 ／ 3φ3W=210 か 440）。どちらか一方を書けば、もう一方は自動で決まります。どちらも空欄なら下の既定の電圧を使います。使用電圧は {VOLTAGE_PATTERN_TEXT} のいずれかです。名称だけの貼り付けも可能です（番号は自動）。
         </p>
         <div className="row">
           <label>
-            既定の使用電圧[V]（電気方式は電圧から決まります: {SYSTEM_OF_PATTERN[volt]}）
+            既定の使用電圧[V]（電気方式は電圧から決まります: {volt ? SYSTEM_OF_PATTERN[volt] : '空欄'}）
             <select value={volt} onChange={(e) => setVolt(e.target.value)}>
+              <option value="">（空欄）</option>
               {VOLTAGE_PATTERNS.map((p) => (
                 <option key={p.value}>{p.value}</option>
               ))}
@@ -64,9 +64,10 @@ export function PasteDialog({
                   <tr>
                     <th>No</th>
                     <th>回路名称</th>
+                    <th>種別</th>
+                    <th>容量[A]</th>
                     <th>電気方式</th>
                     <th>電圧</th>
-                    <th>AT</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -74,9 +75,10 @@ export function PasteDialog({
                     <tr key={i}>
                       <td>{c.no}</td>
                       <td>{c.name}</td>
-                      <td className={c.defaulted.includes('system') ? 'muted' : ''}>{c.system}</td>
-                      <td className={c.defaulted.includes('useVoltage') ? 'muted' : ''}>{c.voltageLabel ?? c.useVoltage}</td>
+                      <td>{c.deviceType ?? ''}</td>
                       <td>{c.breakerA ?? ''}</td>
+                      <td className={c.defaulted.includes('system') ? 'muted' : ''}>{c.system}</td>
+                      <td className={c.defaulted.includes('useVoltage') ? 'muted' : ''}>{c.useVoltage > 0 ? (c.voltageLabel ?? c.useVoltage) : ''}</td>
                     </tr>
                   ))}
                 </tbody>

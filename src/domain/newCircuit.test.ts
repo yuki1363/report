@@ -18,7 +18,7 @@ describe('回路の追加で、書いたとおりに引き継ぐ', () => {
     expect(nextCircuitNo('A-1')).toBe('');
   });
   it('貼り付けの既定電圧を「105/210」と書くと、電圧が空欄の行にも表記が付く', () => {
-    const r = parsePastedCircuits('1\t照明\t\t\t20\n2\t動力\t\t440', { voltage: '105/210' });
+    const r = parsePastedCircuits('1\t照明\t\t20\n2\t動力\t\t\t\t440', { voltage: '105/210' });
     expect(r.circuits.map((c) => c.voltageLabel)).toEqual(['105/210', undefined]); // 行に電圧があればそちらを優先
     expect(r.circuits.map((c) => c.useVoltage)).toEqual([210, 440]);
   });

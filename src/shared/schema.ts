@@ -139,7 +139,10 @@ export const CircuitSchema = z.object({
   id: z.string(),
   no: z.string(),
   name: z.string(),
-  system: WiringSystemSchema,
+  /** 電気方式。空欄（''）にすると、使用電圧も空欄（0）になる */
+  system: z.union([WiringSystemSchema, z.literal('')]),
+  /** 器具の種別（ELB・MCB・Mg など。自由に書ける） */
+  deviceType: z.string().optional(),
   useVoltage: z.number().nonnegative(),
   /** 帳票に出す電圧の表記（例: "105/210"）。省略時は使用電圧の数値を出す。判定には使わない */
   voltageLabel: z.string().optional(),

@@ -10,6 +10,8 @@ export const ExtractedCircuitSchema = z.object({
   no: z.string().nullable(),
   name: z.string().nullable(),
   system: WiringSystemSchema.nullable(),
+  /** 器具の種別（ELB・MCB・Mg など。見出しの「ELB No.」「MCB No.」から） */
+  deviceType: z.string().nullable().optional(),
   useVoltage: z.number().nullable(),
   /** 電圧の表記（資料に書かれたまま。例: "105/210V"）。「105/210」の判別に使う */
   voltageText: z.string().nullable().optional(),
@@ -71,8 +73,10 @@ export const ConfirmPanelSchema = z.object({
     z.object({
       no: z.string(),
       name: z.string(),
-      system: WiringSystemSchema,
-      useVoltage: z.number().positive(),
+      /** 空欄（''）なら、使用電圧も空欄（0） */
+      system: z.union([WiringSystemSchema, z.literal('')]),
+      deviceType: z.string().optional(),
+      useVoltage: z.number().nonnegative(),
       voltageLabel: z.string().optional(),
       breakerA: z.number().nonnegative().optional(),
     }),

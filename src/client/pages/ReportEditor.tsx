@@ -4,7 +4,7 @@ import { autoGroundVoltage, DEFAULT_USE_VOLTAGE } from '../../domain/groundVolta
 import { defaultTestVoltage } from '../../domain/importing.ts';
 import { newCircuit } from '../../domain/newCircuit.ts';
 import { parseVoltage } from '../../domain/system.ts';
-import { applySystem, applyVoltagePattern, patternFor, patternOf, VOLTAGE_PATTERNS, type VoltagePattern } from '../../domain/voltagePattern.ts';
+import { applyBlank, applySystem, applyVoltagePattern, patternFor, patternOf, VOLTAGE_PATTERNS, type VoltagePattern } from '../../domain/voltagePattern.ts';
 import { isLowVoltage, LOW_VOLTAGE_MAX_V } from '../../domain/judgment.ts';
 import { judgeCircuit, VERDICT_LABEL, type Verdict } from '../../domain/judgment.ts';
 import { formatReading, parseReading } from '../../domain/reading.ts';
@@ -332,9 +332,10 @@ export function ReportEditor({ id }: { id: string }) {
                   no: c.no,
                   name: c.name,
                   system: c.system,
+                  ...(c.deviceType ? { deviceType: c.deviceType } : {}),
                   useVoltage: c.useVoltage,
                   ...(c.voltageLabel ? { voltageLabel: c.voltageLabel } : {}),
-                  groundVoltage: autoGroundVoltage(c.system, c.useVoltage),
+                  groundVoltage: c.system ? autoGroundVoltage(c.system, c.useVoltage) : 0,
                   testVoltage: defaultTestVoltage(c.useVoltage),
                   ...(c.breakerA !== undefined ? { breakerA: c.breakerA } : {}),
                   readings: {},
@@ -487,20 +488,23 @@ function VoltageSelect({
   onPick,
   className,
   ...rest
-}: { circuit: Circuit; onPick: (p: VoltagePattern) => void; className?: string } & Record<string, unknown>) {
+}: { circuit: Circuit; onPick: (p: VoltagePattern | null) => void; className?: string } & Record<string, unknown>) {
+  const blank = circuit.useVoltage <= 0;
   const cur = patternOf(circuit.useVoltage, circuit.voltageLabel);
-  const extra = cur ? undefined : (circuit.voltageLabel ?? String(circuit.useVoltage));
+  const extra = cur || blank ? undefined : (circuit.voltageLabel ?? String(circuit.useVoltage));
   return (
     <select
       {...rest}
       className={className}
-      value={cur?.value ?? extra}
-      title="使用電圧（105/210 は単相3線。判定には大きい方の 210V を使います）"
+      value={blank ? '' : (cur?.value ?? extra)}
+      title="使用電圧（105/210 は単相3線。判定には大きい方の 210V を使います）。空欄にすると電気方式も空欄になります"
       onChange={(e) => {
         const p = patternFor(e.target.value);
         if (p) onPick(p);
+        else if (e.target.value === '') onPick(null);
       }}
     >
+      <option value="">（空欄）</option>
       {extra !== undefined && <option value={extra}>（{extra}）</option>}
       {VOLTAGE_PATTERNS.map((p) => (
         <option key={p.value} value={p.value}>
@@ -550,7 +554,7 @@ function ReadingInput({
 
 // ---------------------------------------------------------------------------
 
-const COLS = ['no', 'name', 'system', 'useVoltage', 'groundVoltage', 'testVoltage', ...READING_KEYS, 'note'] as const;
+const COLS = ['no', 'name', 'deviceType', 'breakerA', 'system', 'useVoltage', 'groundVoltage', 'testVoltage', ...READING_KEYS, 'note'] as const;
 
 function CircuitGrid({
   circuits,
@@ -623,6 +627,11 @@ function CircuitGrid({
 
   return (
     <div className="grid-wrap">
+      <datalist id="device-types">
+        {['ELB', 'MCB', 'Mg', 'MCCB', 'NFB', 'ELCB'].map((d) => (
+          <option key={d} value={d} />
+        ))}
+      </datalist>
       <table
         className="grid"
         ref={gridRef}
@@ -637,12 +646,13 @@ function CircuitGrid({
           <tr>
             <th rowSpan={2}>No</th>
             <th rowSpan={2}>回路名称</th>
+            <th rowSpan={2} title="ELB・MCB・Mg など（自由に書けます）">種別</th>
+            <th rowSpan={2}>容量[A]</th>
             <th rowSpan={2}>電気方式</th>
             <th rowSpan={2}>使用電圧[V]</th>
             {showVolt && <th rowSpan={2} title="判定の基準値（0.1 / 0.2 MΩ）の決定に使います">対地電圧[V]</th>}
             {showVolt && <th rowSpan={2}>測定電圧[V]</th>}
             <th colSpan={READING_KEYS.length}>絶縁抵抗値 [MΩ]</th>
-            <th rowSpan={2}>最小値</th>
             <th rowSpan={2}>基準値</th>
             <th rowSpan={2}>判定</th>
             <th rowSpan={2} title="同じ盤名の前回の報告書の最小値">前回最小</th>
@@ -658,7 +668,7 @@ function CircuitGrid({
         <tbody>
           {circuits.map((c, i) => {
             const j = judgeCircuit(c);
-            const auto = autoGroundVoltage(c.system, c.useVoltage);
+            const auto = c.system ? autoGroundVoltage(c.system, c.useVoltage) : 0;
             return (
               <tr key={c.id}>
                 <td>
@@ -668,11 +678,39 @@ function CircuitGrid({
                   <input className="name" value={c.name} {...cellProps(i, 'name')} onChange={(e) => updateCircuit(c.id, (x) => ({ ...x, name: e.target.value }))} />
                 </td>
                 <td>
+                  <input
+                    className="dev"
+                    list="device-types"
+                    value={c.deviceType ?? ''}
+                    {...cellProps(i, 'deviceType')}
+                    onChange={(e) =>
+                      updateCircuit(c.id, (x) => {
+                        const { deviceType: _d, ...rest } = x;
+                        return e.target.value ? { ...rest, deviceType: e.target.value } : rest;
+                      })
+                    }
+                  />
+                </td>
+                <td>
+                  <NumInput
+                    className="volt"
+                    value={c.breakerA}
+                    {...cellProps(i, 'breakerA')}
+                    onChange={(v) =>
+                      updateCircuit(c.id, (x) => {
+                        const { breakerA: _b, ...rest } = x;
+                        return v === undefined ? rest : { ...rest, breakerA: v };
+                      })
+                    }
+                  />
+                </td>
+                <td>
                   <select
                     value={c.system}
                     {...cellProps(i, 'system')}
-                    onChange={(e) => updateCircuit(c.id, (x) => applySystem(x, e.target.value as WiringSystem))}
+                    onChange={(e) => updateCircuit(c.id, (x) => applySystem(x, e.target.value as WiringSystem | ''))}
                   >
+                    <option value="">（空欄）</option>
                     {c.system === '3φ4W' && <option>3φ4W</option>}
                     {SELECTABLE_SYSTEMS.map((s) => (
                       <option key={s}>{s}</option>
@@ -684,7 +722,7 @@ function CircuitGrid({
                     className={`volt ${isLowVoltage(c.useVoltage) ? '' : 'invalid'}`}
                     circuit={c}
                     {...cellProps(i, 'useVoltage')}
-                    onPick={(pat) => updateCircuit(c.id, (x) => applyVoltagePattern(x, pat))}
+                    onPick={(pat) => updateCircuit(c.id, (x) => (pat ? applyVoltagePattern(x, pat) : applyBlank(x)))}
                   />
                 </td>
                 {showVolt && (
@@ -729,7 +767,6 @@ function CircuitGrid({
                     />
                   </td>
                 ))}
-                <td className="num">{formatReading(j.min)}</td>
                 <td className="num" title={j.criterion.label}>
                   {j.criterion.mohm}
                 </td>

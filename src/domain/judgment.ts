@@ -78,7 +78,8 @@ export function judgeCircuit(
 ): CircuitJudgment {
   const criterion = criterionFor(circuit.useVoltage, circuit.groundVoltage, criteria);
   const readings = measuredReadings(circuit);
-  if (readings.length === 0) return { verdict: 'none', criterion };
+  // 電気方式・使用電圧が空欄の回路は、基準値が決まらないので判定しない
+  if (readings.length === 0 || circuit.useVoltage <= 0) return { verdict: 'none', criterion };
   let min = readings[0]!;
   for (const r of readings) {
     // 同値なら 'value'（実測値）を優先して表示する

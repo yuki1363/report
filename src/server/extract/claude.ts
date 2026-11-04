@@ -59,10 +59,11 @@ export const EXTRACTION_JSON_SCHEMA = {
             items: {
               type: 'object',
               additionalProperties: false,
-              required: ['no', 'name', 'system', 'useVoltage', 'voltageText', 'breakerA'],
+              required: ['no', 'name', 'deviceType', 'system', 'useVoltage', 'voltageText', 'breakerA'],
               properties: {
                 no: nullable({ type: 'string' }),
                 name: nullable({ type: 'string' }),
+                deviceType: nullable({ type: 'string' }),
                 system: nullable({ type: 'string', enum: [...SELECTABLE_SYSTEMS] }),
                 useVoltage: nullable({ type: 'number' }),
                 voltageText: nullable({ type: 'string' }),
@@ -98,8 +99,8 @@ panels: 盤ごとに1要素。1つの資料に盤が複数並んでいる場合�
 - 資料や表は、90度・180度回転していることがあります。読める向きに直して読んでください（縦書きに見える文字は、実際は横向きの文字のことがあります）。
 - 表の見出しと項目の対応:
   - 「負荷名称」「回路名称」→ name。名称が複数行にわたる場合は1つの名称にまとめます（例: 「1FP-2-1, 1FP-2-2, 1FP-2-3」）
-  - 「ELB No.」「ブレーカNo.」「回路No.」「MCB No.」→ no（資料の表記のまま文字列）
-  - 「AT」（トリップ電流）→ breakerA。「AF」（フレーム）や「P」（極数）は使いません。AT が空欄なら breakerA は null
+  - 「ELB No.」「ブレーカNo.」「回路No.」「MCB No.」→ no（資料の表記のまま文字列）。見出しの ELB / MCB / Mg（電磁開閉器）などは deviceType に入れる（「ELB No.」の表なら各回路が ELB、下段の「MCB No.」の区画なら MCB）。見出しに無ければ null
+  - 「AT」（トリップ電流）→ breakerA（容量）。「AF」（フレーム）や「P」（極数）は使いません。AT が空欄なら breakerA は null
 - 電気方式と電圧（例: 「3φ3W 210V」「3φ3W 440V」）が、表の端に1回だけ書かれて複数の回路に共通している場合は、その範囲のすべての回路に system と useVoltage を入れてください。表の途中で区画が変わり別の方式・電圧が書かれている場合は、区画ごとに適用します。
 - useVoltage は数値 [V] にします。「105/210V」のように2つ書かれている場合は大きい方です（210）。voltageText には、資料に書かれた電圧の表記を、V を除いてそのまま入れます（例: 「105/210」「210」「440」「105」）。このアプリが扱う電圧は 105 / 105/210 / 210 / 440 の4種類で、3φ4W は扱いません。資料の電圧がこれらと違う場合（例: 100/200V）は、そのまま書き写し、uncertain に「パターン外」と記録してください。
 - 電気方式は 1φ2W / 1φ3W / 3φ3W のどれかに直してください（例: 1Φ3W、1ファイ3、単相3線、1P3W → 1φ3W、三相3線 → 3φ3W）。判断できなければ null です。電気方式と電圧は連動します（1φ2W=105 ／ 1φ3W=105/210 ／ 3φ3W=210 か 440）。資料がこの組み合わせでないときは、書かれたまま写して uncertain に記録してください。

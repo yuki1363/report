@@ -83,3 +83,19 @@ describe('以前のデータの電圧を新しいパターンに直す', () => {
     expect(normalizeLegacyVoltage(fixed)).toBe(fixed);
   });
 });
+
+import { applyBlank } from './voltagePattern.ts';
+
+describe('電気方式の空欄', () => {
+  it('電気方式を空欄にすると、使用電圧・対地電圧・表記も空欄（0）になる。空欄から選べば元に戻る', () => {
+    const blank = applySystem(base, '');
+    expect(blank).toEqual({ system: '', useVoltage: 0, groundVoltage: 0 });
+    expect(applyBlank(base)).toEqual(blank);
+    expect(applySystem(blank, '3φ3W')).toMatchObject({ system: '3φ3W', useVoltage: 210, groundVoltage: 210 });
+    expect(applyVoltagePattern(blank, patternFor('105/210')!)).toMatchObject({ system: '1φ3W', useVoltage: 210, voltageLabel: '105/210' });
+  });
+  it('空欄の回路は、以前のデータの自動修正の対象にしない', () => {
+    const blank = { system: '' as const, useVoltage: 0, groundVoltage: 0 };
+    expect(normalizeLegacyVoltage(blank)).toBe(blank);
+  });
+});

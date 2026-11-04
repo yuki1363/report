@@ -89,3 +89,9 @@ describe('低圧の範囲', () => {
     expect(criterionFor(440, 254).mohm).toBe(0.4);
   });
 });
+
+describe('電気方式・使用電圧が空欄の回路', () => {
+  it('基準値が決まらないので判定しない（測定値があっても none）', () => {
+    expect(judgeCircuit({ useVoltage: 0, groundVoltage: 0, readings: { RE: v(0.01) } }).verdict).toBe('none');
+  });
+});

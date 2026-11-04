@@ -23,6 +23,8 @@ interface Row {
   no: string;
   name: string;
   system: WiringSystem | '';
+  /** ELB・MCB・Mg など */
+  deviceType: string;
   useVoltage: string;
   breakerA: string;
   /** 読み取り時に「自信なし」とされた項目と理由 */
@@ -34,7 +36,9 @@ const toRow = (c: ExtractedCircuit, unc: Row['unc']): Row => ({
   rid: ridSeq++,
   no: c.no ?? '',
   name: c.name ?? '',
-  system: c.system && c.system !== '3φ4W' ? c.system : '',
+  deviceType: c.deviceType ?? '',
+  // 電気方式が読めなくても、電圧が4パターンに合えば電気方式を決める（連動）。どちらも無ければ空欄
+  system: c.system && c.system !== '3φ4W' ? c.system : (SYSTEM_OF_PATTERN[patternOfText(c.voltageText ?? String(c.useVoltage ?? ''))?.value ?? ''] ?? ''),
   // 資料の表記が「105/210」などパターンに合えばそれを使う。なければ数値
   useVoltage: patternOfText(c.voltageText ?? '')?.value ?? (c.useVoltage === null ? '' : String(c.useVoltage)),
   breakerA: c.breakerA === null ? '' : String(c.breakerA),
@@ -125,14 +129,16 @@ export function ConfirmPage({ id, auto }: { id: string; auto: boolean }) {
   const errorsOf = (pn: PanelState): { rowErrors: string[][]; nameMissing: boolean } => ({
     rowErrors: pn.rows.map((r) => {
       const e: string[] = [];
-      if (!r.system) e.push('電気方式');
+      const blankRow = !r.system && !r.useVoltage.trim(); // 電気方式・電圧が空欄の回路はそのまま取り込む
       const v = parseVoltage(r.useVoltage);
-      if (v === undefined || Number.isNaN(v) || v <= 0) e.push('使用電圧');
+      if (blankRow) {
+        // 空欄でよい
+      } else if (v === undefined || Number.isNaN(v) || v <= 0) e.push('使用電圧');
       else if (v > LOW_VOLTAGE_MAX_V) e.push(`使用電圧（低圧は${LOW_VOLTAGE_MAX_V}V以下。高圧の回路は外してください）`);
       else if (!patternOfText(r.useVoltage)) e.push(`使用電圧（${VOLTAGE_PATTERN_TEXT} から選択）`);
       else if (r.system && !allowedTogether(r.system, patternOfText(r.useVoltage)!)) e.push('電気方式と使用電圧の組み合わせ（1φ2W=105 ／ 1φ3W=105/210 ／ 3φ3W=210か440）');
       const b = num(r.breakerA);
-      if (b !== undefined && (Number.isNaN(b) || b < 0)) e.push('ブレーカ容量');
+      if (b !== undefined && (Number.isNaN(b) || b < 0)) e.push('容量');
       return e;
     }),
     nameMissing: mode === 'new' && !pn.name.trim(),
@@ -177,9 +183,10 @@ export function ConfirmPage({ id, auto }: { id: string; auto: boolean }) {
             return {
               no: r.no.trim(),
               name: r.name.trim(),
-              system: r.system as WiringSystem,
-              useVoltage: patternOfText(r.useVoltage)!.useVoltage,
-              ...(patternOfText(r.useVoltage)!.label ? { voltageLabel: patternOfText(r.useVoltage)!.label! } : {}),
+              system: r.system,
+              ...(r.deviceType.trim() ? { deviceType: r.deviceType.trim() } : {}),
+              useVoltage: patternOfText(r.useVoltage)?.useVoltage ?? 0,
+              ...(patternOfText(r.useVoltage)?.label ? { voltageLabel: patternOfText(r.useVoltage)!.label! } : {}),
               ...(b !== undefined ? { breakerA: b } : {}),
             };
           }),
@@ -295,14 +302,20 @@ export function ConfirmPage({ id, auto }: { id: string; auto: boolean }) {
           </fieldset>
 
           <div className="grid-wrap">
+            <datalist id="device-types-c">
+              {['ELB', 'MCB', 'Mg', 'MCCB', 'NFB', 'ELCB'].map((d) => (
+                <option key={d} value={d} />
+              ))}
+            </datalist>
             <table className="grid confirm-grid">
               <thead>
                 <tr>
                   <th>No</th>
                   <th>回路名称</th>
+                  <th>種別</th>
+                  <th>容量[A]</th>
                   <th>電気方式</th>
                   <th>使用電圧[V]</th>
-                  <th>ブレーカ[A]（参考）</th>
                   <th></th>
                 </tr>
               </thead>
@@ -315,13 +328,20 @@ export function ConfirmPage({ id, auto }: { id: string; auto: boolean }) {
                     <td className={uncCls(r.unc.name)} title={r.unc.name}>
                       <input className="name" value={r.name} disabled={confirmed} onChange={(e) => setRow(r.rid, { name: e.target.value }, 'name')} />
                     </td>
+                    <td>
+                      <input className="dev" list="device-types-c" value={r.deviceType} disabled={confirmed} onChange={(e) => setRow(r.rid, { deviceType: e.target.value })} />
+                    </td>
+                    <td className={uncCls(r.unc.breakerA)} title={r.unc.breakerA}>
+                      <input className="volt" inputMode="decimal" value={r.breakerA} disabled={confirmed} onChange={(e) => setRow(r.rid, { breakerA: e.target.value }, 'breakerA')} />
+                    </td>
                     <td className={uncCls(r.unc.system)} title={r.unc.system}>
                       <select value={r.system} disabled={confirmed} onChange={(e) => {
                         // 電気方式を選ぶと、電圧が合わなければその方式の既定の電圧にする（連動）
-                        const system = e.target.value as WiringSystem;
-                        setRow(r.rid, { system, useVoltage: patternForSystem(system, patternOfText(r.useVoltage)).value }, 'system');
+                        // 空欄にすると、使用電圧も空欄になる
+                        const system = e.target.value as WiringSystem | '';
+                        setRow(r.rid, { system, useVoltage: system ? patternForSystem(system, patternOfText(r.useVoltage)).value : '' }, 'system');
                       }}>
-                        <option value="">（未選択）</option>
+                        <option value="">（空欄）</option>
                         {SELECTABLE_SYSTEMS.map((s) => (
                           <option key={s}>{s}</option>
                         ))}
@@ -331,16 +351,13 @@ export function ConfirmPage({ id, auto }: { id: string; auto: boolean }) {
                       <select className="volt" value={patternOfText(r.useVoltage)?.value ?? ''} disabled={confirmed} onChange={(e) => {
                         // 電圧を選ぶと、電気方式も自動で決まる（連動）
                         const sys = SYSTEM_OF_PATTERN[e.target.value];
-                        setRow(r.rid, { useVoltage: e.target.value, ...(sys ? { system: sys } : {}) }, 'useVoltage');
+                        setRow(r.rid, { useVoltage: e.target.value, ...(sys ? { system: sys } : e.target.value === '' ? { system: '' as const } : {}) }, 'useVoltage');
                       }}>
-                        <option value="">{r.useVoltage ? `（${r.useVoltage}）要選択` : '（選択）'}</option>
+                        <option value="">{r.useVoltage ? `（${r.useVoltage}）要選択` : '（空欄）'}</option>
                         {VOLTAGE_PATTERNS.map((p) => (
                           <option key={p.value}>{p.value}</option>
                         ))}
                       </select>
-                    </td>
-                    <td className={uncCls(r.unc.breakerA)} title={r.unc.breakerA}>
-                      <input className="volt" inputMode="decimal" value={r.breakerA} disabled={confirmed} onChange={(e) => setRow(r.rid, { breakerA: e.target.value }, 'breakerA')} />
                     </td>
                     <td className="row-actions">
                       {!confirmed && (
@@ -350,7 +367,7 @@ export function ConfirmPage({ id, auto }: { id: string; auto: boolean }) {
                             title="この下に行を挿入"
                             onClick={() => {
                               const next = [...rows];
-                              next.splice(i + 1, 0, { ...toRow({ no: null, name: null, system: r.system || null, useVoltage: null, breakerA: null }, {}), useVoltage: r.useVoltage });
+                              next.splice(i + 1, 0, { ...toRow({ no: null, name: null, deviceType: r.deviceType || null, system: r.system || null, useVoltage: null, breakerA: null }, {}), useVoltage: r.useVoltage });
                               setRows(() => next);
                             }}
                           >
@@ -368,7 +385,7 @@ export function ConfirmPage({ id, auto }: { id: string; auto: boolean }) {
             </table>
             {!confirmed && (
               <div className="grid-footer">
-                <button onClick={() => setRows((rs) => [...rs, toRow({ no: String(rows.length + 1), name: null, system: '1φ3W', useVoltage: DEFAULT_USE_VOLTAGE['1φ3W'], breakerA: null }, {})])}>
+                <button onClick={() => setRows((rs) => [...rs, toRow({ no: String(rows.length + 1), name: null, system: '1φ3W', useVoltage: DEFAULT_USE_VOLTAGE['1φ3W'], voltageText: '105/210', breakerA: null }, {})])}>
                   ＋ 回路を追加
                 </button>
                 <span className="muted">

@@ -184,3 +184,4 @@ td.dropped { color: var(--bad); font-weight: bold; background: #fee2e2; }
 
 .topbar .build { margin-left: auto; font-size: 11px; color: #9ca3af; }
 .warn.stale { margin: 0; border-radius: 0; text-align: center; }
+table.grid input.dev { width: 4.5em; }
