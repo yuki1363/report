@@ -1,6 +1,7 @@
 /** 回路をまとめて貼り付けて追加する（Excel などからコピーした表をそのまま貼れる） */
 import { useMemo, useState } from 'react';
 import { parsePastedCircuits, type PastedCircuit } from '../domain/pasteCircuits.ts';
+import { parseVoltage } from '../domain/system.ts';
 import { WIRING_SYSTEMS, type WiringSystem } from '../shared/schema.ts';
 
 export function PasteDialog({
@@ -17,7 +18,7 @@ export function PasteDialog({
   const [text, setText] = useState('');
   const [system, setSystem] = useState<WiringSystem>(defaultSystem);
   const [volt, setVolt] = useState(String(defaultVoltage));
-  const v = Number(volt.replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0)));
+  const v = parseVoltage(volt) ?? NaN;
   const voltOk = Number.isFinite(v) && v > 0;
   const result = useMemo(() => parsePastedCircuits(text, { system, useVoltage: voltOk ? v : 100 }), [text, system, v, voltOk]);
 
@@ -40,7 +41,7 @@ export function PasteDialog({
             </select>
           </label>
           <label>
-            既定の使用電圧[V]
+            既定の使用電圧[V]（105/210 のように書くと大きい方）
             <input value={volt} inputMode="decimal" className={voltOk ? '' : 'invalid'} onChange={(e) => setVolt(e.target.value)} />
           </label>
         </div>

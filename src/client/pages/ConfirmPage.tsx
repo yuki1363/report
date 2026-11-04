@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { DEFAULT_USE_VOLTAGE } from '../../domain/groundVoltage.ts';
 import { LOW_VOLTAGE_MAX_V } from '../../domain/judgment.ts';
+import { parseVoltage } from '../../domain/system.ts';
 import type { ExtractedCircuit, ImportRecord } from '../../shared/extraction.ts';
 import { WIRING_SYSTEMS, type WiringSystem } from '../../shared/schema.ts';
 import { api } from '../api.ts';
@@ -123,7 +124,7 @@ export function ConfirmPage({ id, auto }: { id: string; auto: boolean }) {
     rowErrors: pn.rows.map((r) => {
       const e: string[] = [];
       if (!r.system) e.push('電気方式');
-      const v = num(r.useVoltage);
+      const v = parseVoltage(r.useVoltage);
       if (v === undefined || Number.isNaN(v) || v <= 0) e.push('使用電圧');
       else if (v > LOW_VOLTAGE_MAX_V) e.push(`使用電圧（低圧は${LOW_VOLTAGE_MAX_V}V以下。高圧の回路は外してください）`);
       const b = num(r.breakerA);
@@ -173,7 +174,7 @@ export function ConfirmPage({ id, auto }: { id: string; auto: boolean }) {
               no: r.no.trim(),
               name: r.name.trim(),
               system: r.system as WiringSystem,
-              useVoltage: num(r.useVoltage)!,
+              useVoltage: parseVoltage(r.useVoltage)!,
               ...(b !== undefined ? { breakerA: b } : {}),
             };
           }),
@@ -331,7 +332,7 @@ export function ConfirmPage({ id, auto }: { id: string; auto: boolean }) {
                             title="この下に行を挿入"
                             onClick={() => {
                               const next = [...rows];
-                              next.splice(i + 1, 0, toRow({ no: null, name: null, system: r.system || null, useVoltage: num(r.useVoltage) ?? null, breakerA: null }, {}));
+                              next.splice(i + 1, 0, toRow({ no: null, name: null, system: r.system || null, useVoltage: parseVoltage(r.useVoltage) ?? null, breakerA: null }, {}));
                               setRows(() => next);
                             }}
                           >

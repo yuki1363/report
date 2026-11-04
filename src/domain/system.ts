@@ -6,9 +6,28 @@ export const toHalf = (s: string) =>
     .replace(/[０-９Ａ-Ｚａ-ｚ．／（）]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xfee0))
     .replace(/　/g, ' ');
 
-/** 電気方式の表記ゆれ（1Φ3W, 1P3W, 単相3線 等）を正規化する */
+/**
+ * 電圧の入力を数値 [V] にする。
+ * - 「105/210」「100/200V」のように2つ書かれている場合は大きい方（単相3線の線間電圧）を使う
+ * - 全角、カンマ、末尾の V・ボルト は許す。数値にできなければ NaN、空なら undefined
+ */
+export function parseVoltage(input: string): number | undefined {
+  const t = toHalf(input).replace(/[,\s]/g, '').replace(/(V|ボルト)$/i, '');
+  if (t === '') return undefined;
+  const parts = t.split(/[/／]/);
+  if (parts.length > 2 || parts.some((x) => !/^\d+(\.\d+)?$/.test(x))) return NaN;
+  return Math.max(...parts.map(Number));
+}
+
+/** 電気方式の表記ゆれ（1Φ3W, 1P3W, 1ファイ3, 単相3線 等）を正規化する */
 export function normalizeSystem(s: string): WiringSystem | null {
   const t = toHalf(s).replace(/\s/g, '');
+  // 「1ファイ3」「1ふぁい3W」「1φ3」（W なし）など、読み方・省略の表記
+  const kana = /([13])(?:ファイ|ふぁい|フィー|ぱい|パイ|φ|Φ)([234])(?:W|w|線)?(?![0-9])/.exec(t);
+  if (kana) {
+    const v = `${kana[1]}φ${kana[2]}W`;
+    return (['1φ2W', '1φ3W', '3φ3W', '3φ4W'] as const).find((x) => x === v) ?? null;
+  }
   // φ は OCR で「の」「ゅ」「ゆ」「9」「中」などに誤認されやすい
   const m = /([13])\s*(?:φ|Φ|ϕ|ψ|Ψ|P|p|ph|の|ゅ|ゆ|9|中|ф)\s*([234])\s*W/i.exec(t);
   if (m) {

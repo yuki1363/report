@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 're
 import type { CircuitComparison, PreviousComparison } from '../../domain/compare.ts';
 import { autoGroundVoltage, DEFAULT_USE_VOLTAGE } from '../../domain/groundVoltage.ts';
 import { defaultTestVoltage } from '../../domain/importing.ts';
+import { parseVoltage } from '../../domain/system.ts';
 import { isLowVoltage, LOW_VOLTAGE_MAX_V } from '../../domain/judgment.ts';
 import { judgeCircuit, judgePanel, VERDICT_LABEL, type Verdict } from '../../domain/judgment.ts';
 import { formatReading, parseReading } from '../../domain/reading.ts';
@@ -43,11 +44,10 @@ export function newCircuit(prev?: Circuit): Circuit {
   };
 }
 
+/** 数値入力の解析。全角可。「105/210」のように書かれたら大きい方（使用電圧用） */
 const optNum = (s: string): number | undefined => {
-  const t = s.trim().replace(/[０-９．]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xfee0));
-  if (t === '') return undefined;
-  const n = Number(t);
-  return Number.isFinite(n) ? n : undefined;
+  const n = parseVoltage(s);
+  return n === undefined || Number.isNaN(n) ? undefined : n;
 };
 
 export function ReportEditor({ id }: { id: string }) {

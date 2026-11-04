@@ -8,7 +8,7 @@
  */
 import type { WiringSystem } from '../shared/schema.ts';
 import { LOW_VOLTAGE_MAX_V } from './judgment.ts';
-import { normalizeSystem, toHalf } from './system.ts';
+import { normalizeSystem, parseVoltage, toHalf } from './system.ts';
 
 export interface PastedCircuit {
   no: string;
@@ -67,7 +67,7 @@ export function parsePastedCircuits(text: string, defaults: PasteDefaults): Past
     const sysText = cells[2] ?? '';
     const system = sysText ? normalizeSystem(sysText) : defaults.system;
     const voltText = cells[3] ?? '';
-    const volt = voltText ? toNumber(voltText) : defaults.useVoltage;
+    const volt = voltText ? parseVoltage(voltText) : defaults.useVoltage;
     const at = cells[4] ? toNumber(cells[4]) : undefined;
     const fail = (reason: string) => result.errors.push({ line: idx + 1, text: raw.trim(), reason });
     if (!name && !no) return fail('回路No・回路名称が空です');
