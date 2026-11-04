@@ -78,15 +78,24 @@ describe('generateSheet（repeatRegion 展開）', () => {
     const s = generateSheet(template.sheet, report(2));
     const row = 8; // 最初の回路行
     expect(s.cells[`${row},1`]!.value).toBe('動力1');
-    expect(s.cells[`${row},9`]!.value).toBe('50'); // RE
-    expect(s.cells[`${row},10`]!.value).toBe('-'); // SE (na)
-    expect(s.cells[`${row},13`]!.value).toBe('>2000'); // ALL_E
-    expect(s.cells[`${row},14`]!.value).toBe('50'); // 最小値
-    expect(s.cells[`${row},15`]!.value).toBe('0.2'); // 基準値
-    expect(s.cells[`${row},16`]!.value).toBe('良');
+    expect(s.cells[`${row},7`]!.value).toBe('50'); // RE
+    expect(s.cells[`${row},8`]!.value).toBe('-'); // SE (na)
+    expect(s.cells[`${row},11`]!.value).toBe('>2000'); // ALL_E
+    expect(s.cells[`${row},12`]!.value).toBe('50'); // 最小値
+    expect(s.cells[`${row},13`]!.value).toBe('0.2'); // 基準値
+    expect(s.cells[`${row},14`]!.value).toBe('良');
     expect(s.page.repeatHeaderRows).toEqual([6, 7]);
     // 総合判定は回路2件ぶん下にずれる
     expect(s.cells['11,3']!.value).toBe('良');
+  });
+
+  it('既定テンプレートに、対地電圧・測定電圧・測定者・測定器は出ない', () => {
+    // 最下行の注記（判定基準の説明文）には「対地電圧」の語が残る。見出し・項目だけを調べる。
+    const values = Object.values(generateSheet(template.sheet, report(2)).cells).map((c) => c.value ?? '');
+    const text = values.filter((v) => !v.startsWith('判定基準')).join('\n');
+    for (const w of ['対地電圧', '測定電圧', '測定者', '測定器', '製造番号', '校正日']) expect(text).not.toContain(w);
+    expect(text).toContain('測定日：2026-11-04'); // 測定日は残る（空欄でも可）
+    expect(JSON.stringify(template.sheet.cells)).not.toMatch(/groundVoltage|testVoltage|inspector|instrument/);
   });
 
   it('既定テンプレートは用紙幅に収まる', () => {

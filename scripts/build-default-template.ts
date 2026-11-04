@@ -9,16 +9,14 @@ import { READING_KEYS, READING_LABELS, TemplateSchema, type Cell, type CellStyle
 
 const cols = [
   10, // 0 No
-  48, // 1 回路名称
+  76, // 1 回路名称
   16, // 2 電気方式
   14, // 3 使用電圧
-  14, // 4 対地電圧
-  14, // 5 測定電圧
-  13, 13, 13, 13, 13, 13, 13, 13, // 6-13 測定値
-  16, // 14 最小値
-  14, // 15 基準値
-  12, // 16 判定
-  15, // 17 備考
+  13, 13, 13, 13, 13, 13, 13, 13, // 4-11 測定値
+  16, // 12 最小値
+  14, // 13 基準値
+  12, // 14 判定
+  15, // 15 備考
 ];
 const LAST = cols.length - 1;
 
@@ -44,13 +42,12 @@ set(0, 0, '絶縁抵抗測定報告書', { sizePt: 16, bold: true, hAlign: 'cent
 merge(0, 0, 0, LAST);
 // 1: 余白
 rows.push(3);
-// 2-4: 基本情報
-const info = (r: number, items: [string, string, string]) => {
+// 2-4: 基本情報（測定者・測定器は帳票に載せない。測定日は空欄でも可）
+const info = (r: number, items: [string, string]) => {
   rows.push(7);
   const ranges: [number, number][] = [
-    [0, 5],
-    [6, 11],
-    [12, LAST],
+    [0, 7],
+    [8, LAST],
   ];
   ranges.forEach(([c1, c2], i) => {
     for (let c = c1; c <= c2; c++) set(r, c, '', { border: { b: 'thin' } });
@@ -58,9 +55,9 @@ const info = (r: number, items: [string, string, string]) => {
     merge(r, c1, r, c2);
   });
 };
-info(2, ['盤名：{{panel.name}}', '測定日：{{report.date}}', '測定者：{{report.inspector}}']);
-info(3, ['設置場所：{{panel.location}}', '温度：{{report.tempC}} ℃　湿度：{{report.humidity}} %', '測定器：{{instrument.model}}']);
-info(4, ['回路数：{{report.circuitCount}}', '製造番号：{{instrument.serial}}', '校正日：{{instrument.calDate}}']);
+info(2, ['盤名：{{panel.name}}', '測定日：{{report.date}}']);
+info(3, ['設置場所：{{panel.location}}', '温度：{{report.tempC}} ℃　湿度：{{report.humidity}} %']);
+info(4, ['回路数：{{report.circuitCount}}', '']);
 // 5: 余白
 rows.push(4);
 
@@ -71,14 +68,12 @@ boxed(6, 0, 7, 0, 'No', H);
 boxed(6, 1, 7, 1, '回路名称', H);
 boxed(6, 2, 7, 2, '電気方式', H);
 boxed(6, 3, 7, 3, '使用電圧\n[V]', H);
-boxed(6, 4, 7, 4, '対地電圧\n[V]', H);
-boxed(6, 5, 7, 5, '測定電圧\n[V]', H);
-boxed(6, 6, 6, 13, '絶縁抵抗値 [MΩ]', H);
-READING_KEYS.forEach((k, i) => boxed(7, 6 + i, 7, 6 + i, READING_LABELS[k], H));
-boxed(6, 14, 7, 14, '最小値\n[MΩ]', H);
-boxed(6, 15, 7, 15, '基準値\n[MΩ]', H);
-boxed(6, 16, 7, 16, '判定', H);
-boxed(6, 17, 7, 17, '備考', H);
+boxed(6, 4, 6, 11, '絶縁抵抗値 [MΩ]', H);
+READING_KEYS.forEach((k, i) => boxed(7, 4 + i, 7, 4 + i, READING_LABELS[k], H));
+boxed(6, 12, 7, 12, '最小値\n[MΩ]', H);
+boxed(6, 13, 7, 13, '基準値\n[MΩ]', H);
+boxed(6, 14, 7, 14, '判定', H);
+boxed(6, 15, 7, 15, '備考', H);
 
 // 8: 回路行（回路数ぶん繰り返す）
 rows.push(7);
@@ -87,13 +82,11 @@ set(8, 0, '{{c.no}}', { ...C, hAlign: 'center' });
 set(8, 1, '{{c.name}}', { ...C, shrinkToFit: true });
 set(8, 2, '{{c.system}}', { ...C, hAlign: 'center' });
 set(8, 3, '{{c.useVoltage}}', { ...C, hAlign: 'right' });
-set(8, 4, '{{c.groundVoltage}}', { ...C, hAlign: 'right' });
-set(8, 5, '{{c.testVoltage}}', { ...C, hAlign: 'right' });
-READING_KEYS.forEach((k, i) => set(8, 6 + i, `{{c.${k}}}`, { ...C, hAlign: 'right', shrinkToFit: true }));
-set(8, 14, '{{c.min}}', { ...C, hAlign: 'right', shrinkToFit: true });
-set(8, 15, '{{c.criterion}}', { ...C, hAlign: 'right' });
-set(8, 16, '{{c.judgment}}', { ...C, hAlign: 'center', bold: true });
-set(8, 17, '{{c.note}}', { ...C, shrinkToFit: true });
+READING_KEYS.forEach((k, i) => set(8, 4 + i, `{{c.${k}}}`, { ...C, hAlign: 'right', shrinkToFit: true }));
+set(8, 12, '{{c.min}}', { ...C, hAlign: 'right', shrinkToFit: true });
+set(8, 13, '{{c.criterion}}', { ...C, hAlign: 'right' });
+set(8, 14, '{{c.judgment}}', { ...C, hAlign: 'center', bold: true });
+set(8, 15, '{{c.note}}', { ...C, shrinkToFit: true });
 
 // 9: 余白
 rows.push(4);

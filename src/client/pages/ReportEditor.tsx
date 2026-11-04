@@ -10,7 +10,6 @@ import {
   TEST_VOLTAGES,
   WIRING_SYSTEMS,
   type Circuit,
-  type Instrument,
   type ReadingKey,
   type Report,
   type Sheet,
@@ -56,7 +55,6 @@ export function ReportEditor({ id }: { id: string }) {
   const [saveState, setSaveState] = useState<SaveState>('saved');
   const [tab, setTab] = useState<'input' | 'format' | 'preview'>('input');
   const [previewKey, setPreviewKey] = useState(0);
-  const [instruments, setInstruments] = useState<Instrument[]>([]);
   const [templates, setTemplates] = useState<TemplateSummary[]>([]);
   const [aiEnabled, setAiEnabled] = useState(false);
   const [outBusy, setOutBusy] = useState('');
@@ -82,7 +80,6 @@ export function ReportEditor({ id }: { id: string }) {
     api
       .getSettings()
       .then((s) => {
-        setInstruments(s.settings.instruments);
         setAiEnabled(s.settings.aiExtraction);
       })
       .catch(() => {});
@@ -297,7 +294,7 @@ export function ReportEditor({ id }: { id: string }) {
         />
       ) : (
         <>
-          <HeaderForm report={report} instruments={instruments} templates={templates} update={update} />
+          <HeaderForm report={report} templates={templates} update={update} />
           <div className="toolbar sub">
             <button onClick={() => setPasting(true)} title="Excel などの表をコピーして、まとめて追加します">
               📋 回路を貼り付けて追加
@@ -380,12 +377,10 @@ export function ReportEditor({ id }: { id: string }) {
 
 function HeaderForm({
   report,
-  instruments,
   templates,
   update,
 }: {
   report: Report;
-  instruments: Instrument[];
   templates: TemplateSummary[];
   update: (fn: (r: Report) => Report) => void;
 }) {
@@ -429,10 +424,6 @@ function HeaderForm({
         測定日
         <input type="date" value={report.date} onChange={(e) => update((r) => ({ ...r, date: e.target.value }))} />
       </label>
-      <label>
-        測定者
-        <input value={report.inspector} onChange={(e) => update((r) => ({ ...r, inspector: e.target.value }))} />
-      </label>
       <label className="short">
         温度[℃]
         <NumInput value={report.tempC} onChange={(v) => update((r) => withOpt(r, 'tempC', v))} />
@@ -440,55 +431,6 @@ function HeaderForm({
       <label className="short">
         湿度[%]
         <NumInput value={report.humidity} onChange={(v) => update((r) => withOpt(r, 'humidity', v))} />
-      </label>
-      <label>
-        測定器
-        <span className="row">
-          {instruments.length > 0 && (
-            <select
-              value=""
-              onChange={(e) => {
-                const ins = instruments.find((i) => i.id === e.target.value);
-                if (ins)
-                  update((r) => ({
-                    ...r,
-                    instrument: {
-                      model: ins.model,
-                      ...(ins.serial ? { serial: ins.serial } : {}),
-                      ...(ins.calDate ? { calDate: ins.calDate } : {}),
-                    },
-                  }));
-              }}
-            >
-              <option value="">マスタから選択…</option>
-              {instruments.map((i) => (
-                <option key={i.id} value={i.id}>
-                  {i.model} {i.serial}
-                </option>
-              ))}
-            </select>
-          )}
-          <input
-            placeholder="型式"
-            value={report.instrument.model}
-            onChange={(e) => update((r) => ({ ...r, instrument: { ...r.instrument, model: e.target.value } }))}
-          />
-        </span>
-      </label>
-      <label>
-        製造番号
-        <input
-          value={report.instrument.serial ?? ''}
-          onChange={(e) => update((r) => ({ ...r, instrument: { ...r.instrument, serial: e.target.value } }))}
-        />
-      </label>
-      <label>
-        校正日
-        <input
-          type="date"
-          value={report.instrument.calDate ?? ''}
-          onChange={(e) => update((r) => ({ ...r, instrument: { ...r.instrument, calDate: e.target.value } }))}
-        />
       </label>
     </fieldset>
   );
@@ -592,6 +534,8 @@ function CircuitGrid({
   onCellFocus: (row: number, key: ReadingKey) => void;
 }) {
   const gridRef = useRef<HTMLTableElement>(null);
+  /** 対地電圧・測定電圧は帳票に載せないため既定では隠す（対地電圧は判定の基準値に内部で使う） */
+  const [showVolt, setShowVolt] = useState(false);
   const pendingFocus = useRef<{ row: number; col: number } | null>(null);
 
   const focusCell = (row: number, col: number) => {
@@ -659,8 +603,8 @@ function CircuitGrid({
             <th rowSpan={2}>回路名称</th>
             <th rowSpan={2}>電気方式</th>
             <th rowSpan={2}>使用電圧[V]</th>
-            <th rowSpan={2}>対地電圧[V]</th>
-            <th rowSpan={2}>測定電圧[V]</th>
+            {showVolt && <th rowSpan={2} title="判定の基準値（0.1 / 0.2 MΩ）の決定に使います">対地電圧[V]</th>}
+            {showVolt && <th rowSpan={2}>測定電圧[V]</th>}
             <th colSpan={READING_KEYS.length}>絶縁抵抗値 [MΩ]</th>
             <th rowSpan={2}>最小値</th>
             <th rowSpan={2}>基準値</th>
@@ -711,6 +655,8 @@ function CircuitGrid({
                     }
                   />
                 </td>
+                {showVolt && (
+                  <>
                 <td>
                   <NumInput
                     className={`volt ${c.groundVoltage !== auto ? 'manual' : ''}`}
@@ -733,6 +679,8 @@ function CircuitGrid({
                     ))}
                   </select>
                 </td>
+                  </>
+                )}
                 {READING_KEYS.map((k) => (
                   <td key={k}>
                     <ReadingInput
@@ -786,9 +734,12 @@ function CircuitGrid({
       </table>
       <div className="grid-footer">
         <button onClick={() => addCircuit()}>＋ 回路を追加</button>
+        <label className="check inline-check" title="帳票には載りません。判定の基準値（0.1 / 0.2 MΩ）は、電気方式と使用電圧から自動で決まります">
+          <input type="checkbox" checked={showVolt} onChange={(e) => setShowVolt(e.target.checked)} /> 対地電圧・測定電圧を表示（通常は不要）
+        </label>
         <span className="muted">
           入力: 数値 ／ 「&gt;2000」= 上限超過 ／ 「-」= 測定対象外。Enter・↑↓ で上下移動、最終行で Enter → 行追加。
-          対地電圧は自動算出（オレンジ枠 = 手動上書き）。
+          
         </span>
       </div>
     </div>

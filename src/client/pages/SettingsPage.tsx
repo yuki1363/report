@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { Instrument, Settings } from '../../shared/schema.ts';
+import type { Settings } from '../../shared/schema.ts';
 import { api, type SettingsResponse } from '../api.ts';
 
 export function SettingsPage() {
@@ -31,9 +31,6 @@ export function SettingsPage() {
       setError((e as Error).message);
     }
   };
-
-  const setInstrument = (id: string, patch: Partial<Instrument>) =>
-    setSettings({ ...settings, instruments: settings.instruments.map((i) => (i.id === id ? { ...i, ...patch } : i)) });
 
   return (
     <section className="settings">
@@ -93,50 +90,6 @@ export function SettingsPage() {
         <p className="muted">
           判定は各回路の測定値（数値・上限超過）の最小値で行い、「-」（測定対象外）は除外します。盤全体は1回路でも「否」があれば「否」です。
         </p>
-      </fieldset>
-
-      <fieldset>
-        <legend>計器マスタ</legend>
-        <table className="list">
-          <thead>
-            <tr>
-              <th>型式</th>
-              <th>製造番号</th>
-              <th>校正日</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {settings.instruments.map((i) => (
-              <tr key={i.id}>
-                <td>
-                  <input value={i.model} onChange={(e) => setInstrument(i.id, { model: e.target.value })} />
-                </td>
-                <td>
-                  <input value={i.serial ?? ''} onChange={(e) => setInstrument(i.id, { serial: e.target.value })} />
-                </td>
-                <td>
-                  <input type="date" value={i.calDate ?? ''} onChange={(e) => setInstrument(i.id, { calDate: e.target.value })} />
-                </td>
-                <td>
-                  <button
-                    className="danger"
-                    onClick={() => setSettings({ ...settings, instruments: settings.instruments.filter((x) => x.id !== i.id) })}
-                  >
-                    削除
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        <button
-          onClick={() =>
-            setSettings({ ...settings, instruments: [...settings.instruments, { id: crypto.randomUUID(), model: '' }] })
-          }
-        >
-          ＋ 計器を追加
-        </button>
       </fieldset>
 
       <fieldset>
