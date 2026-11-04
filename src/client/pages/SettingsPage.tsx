@@ -54,7 +54,7 @@ export function SettingsPage() {
         </label>
         <p className="warn">
           ON にすると、取り込んだ図面・写真が Anthropic API に送信されます。社内の情報持ち出しルールで外部 API の利用が許可されているか確認してから ON にしてください。
-          OFF の場合はオフライン読み取り（OCR）のみ使用します（図面の読み取り精度は低い）。メガー写真の読み取りは ON のときだけ使えます。
+          OFF の場合はオフライン読み取り（OCR）のみ使用します（図面の読み取り精度は低い）。
         </p>
         <p>
           モデル名: <code>{data.model}</code>（.env の CLAUDE_MODEL で変更）／ API キー: {data.apiKeyConfigured ? '設定済み' : '未設定'}
