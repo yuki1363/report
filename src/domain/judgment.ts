@@ -15,6 +15,11 @@ import {
   type Reading,
 } from '../shared/schema.ts';
 
+/** 低圧の上限 [V]（交流。電気設備技術基準の低圧は 600V 以下）。このアプリは低圧の測定だけを対象にする。 */
+export const LOW_VOLTAGE_MAX_V = 600;
+
+export const isLowVoltage = (useVoltage: number): boolean => useVoltage <= LOW_VOLTAGE_MAX_V;
+
 export type Verdict = 'good' | 'bad' | 'none';
 
 export const VERDICT_LABEL: Record<Verdict, string> = {

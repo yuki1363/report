@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Circuit } from '../shared/schema.ts';
 import { autoGroundVoltage } from './groundVoltage.ts';
-import { criterionFor, judgeCircuit, judgePanel } from './judgment.ts';
+import { criterionFor, isLowVoltage, judgeCircuit, judgePanel, LOW_VOLTAGE_MAX_V } from './judgment.ts';
 
 type C = Pick<Circuit, 'readings' | 'useVoltage' | 'groundVoltage'>;
 const v = (mohm: number) => ({ kind: 'value' as const, mohm });
@@ -73,4 +73,14 @@ describe('対地電圧の自動算出', () => {
     ['3φ3W', 200, 200],
     ['3φ4W', 400, 231],
   ] as const)('%s %dV → %dV', (sys, u, g) => expect(autoGroundVoltage(sys, u)).toBe(g));
+});
+
+describe('低圧の範囲', () => {
+  it('600V 以下が低圧。440V は低圧で基準 0.4MΩ', () => {
+    expect(LOW_VOLTAGE_MAX_V).toBe(600);
+    expect([100, 210, 440, 600].every(isLowVoltage)).toBe(true);
+    expect(isLowVoltage(601)).toBe(false);
+    expect(isLowVoltage(6600)).toBe(false);
+    expect(criterionFor(440, 254).mohm).toBe(0.4);
+  });
 });

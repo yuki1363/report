@@ -12,6 +12,8 @@ describe('読み取りの指示文', () => {
     expect(SYSTEM_PROMPT).toContain('MCB');
     expect(SYSTEM_PROMPT).toContain('盤が複数');
     expect(SYSTEM_PROMPT).toContain('回転');
+    expect(SYSTEM_PROMPT).toContain('低圧');
+    expect(SYSTEM_PROMPT).toContain('高圧');
   });
   it('追加の指示ファイルが無ければそのまま、あれば末尾に足す', () => {
     expect(systemPromptWithNotes(dir)).toBe(SYSTEM_PROMPT);

@@ -25,6 +25,11 @@ describe('回路の貼り付け', () => {
     const r = parsePastedCircuits('1  照明 1F  1φ3W  200  20', d);
     expect(r.circuits[0]).toMatchObject({ no: '1', name: '照明 1F', system: '1φ3W', useVoltage: 200, breakerA: 20 });
   });
+  it('高圧（600V 超）は取り込まない。600V ちょうどは可', () => {
+    const r = parsePastedCircuits('1\t高圧受電\t3φ3W\t6600\n2\t動力\t3φ3W\t600', d);
+    expect(r.circuits.map((c) => c.no)).toEqual(['2']);
+    expect(r.errors[0]!.reason).toContain('低圧');
+  });
   it('判別できない行は理由つきで返し、他の行は取り込む', () => {
     const r = parsePastedCircuits('1\tA\t2φ3W\t200\n2\tB\t1φ2W\tabc\n3\tC\t1φ2W\t100\t-5\n4\tD', d);
     expect(r.errors.map((e) => e.line)).toEqual([1, 2, 3]);

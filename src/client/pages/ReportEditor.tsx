@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 're
 import type { CircuitComparison, PreviousComparison } from '../../domain/compare.ts';
 import { autoGroundVoltage, DEFAULT_USE_VOLTAGE } from '../../domain/groundVoltage.ts';
 import { defaultTestVoltage } from '../../domain/importing.ts';
+import { isLowVoltage, LOW_VOLTAGE_MAX_V } from '../../domain/judgment.ts';
 import { judgeCircuit, judgePanel, VERDICT_LABEL, type Verdict } from '../../domain/judgment.ts';
 import { formatReading, parseReading } from '../../domain/reading.ts';
 import {
@@ -317,6 +318,12 @@ export function ReportEditor({ id }: { id: string }) {
               <span className="muted">前回値: 同じ盤名で過去の報告書がありません</span>
             )}
           </div>
+          {report.circuits.some((c) => !isLowVoltage(c.useVoltage)) && (
+            <p className="warn">
+              使用電圧が低圧（{LOW_VOLTAGE_MAX_V}V 以下）を超えている回路があります（{report.circuits.filter((c) => !isLowVoltage(c.useVoltage)).map((c) => c.no || c.name).join('、')}）。
+              このアプリは低圧の絶縁抵抗測定だけが対象です。入力を確認してください。
+            </p>
+          )}
           <CircuitGrid
             circuits={report.circuits}
             updateCircuit={updateCircuit}
@@ -647,7 +654,7 @@ function CircuitGrid({
                 </td>
                 <td>
                   <NumInput
-                    className="volt"
+                    className={`volt ${isLowVoltage(c.useVoltage) ? '' : 'invalid'}`}
                     value={c.useVoltage}
                     {...cellProps(i, 'useVoltage')}
                     onChange={(v) =>
