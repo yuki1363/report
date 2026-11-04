@@ -189,3 +189,19 @@ describe('以前のデータの取り込み（バックアップ・旧版の app
     expect(((await res.json()) as { error: string }).error).toContain('データベース');
   });
 });
+
+describe('以前の版の電圧の自動修正', () => {
+  it('起動時に、以前の電圧（200・400 など）を新しい4パターンに直す。更新日時は変えない。2回目は何も変えない', () => {
+    const s = new Store(':memory:');
+    const c = (id: string, system: '1φ2W' | '1φ3W' | '3φ3W' | '3φ4W', useVoltage: number) => ({ id, no: id, name: id, system, useVoltage, groundVoltage: 0, testVoltage: 250 as const, readings: {}, source: 'manual' as const });
+    s.saveReport({ id: 'legacy', templateId: 'default', panel: { name: '旧' }, date: '2026-01-01', inspector: '', instrument: { model: '' }, sourceFiles: [],
+      circuits: [c('a', '1φ3W', 200), c('b', '3φ3W', 400), c('c', '3φ4W', 400), c('d', '1φ2W', 200)] });
+    const before = s.listReports()[0]!.updatedAt;
+    expect(s.migrateVoltagePatterns()).toBe(1);
+    const r = s.getReport('legacy')!;
+    expect(r.circuits.map((x) => `${x.system}:${x.voltageLabel ?? x.useVoltage}:${x.groundVoltage}`)).toEqual(['1φ3W:105/210:105', '3φ3W:440:440', '3φ3W:440:440', '1φ2W:200:0']);
+    expect(s.listReports()[0]!.updatedAt).toBe(before);
+    expect(s.migrateVoltagePatterns()).toBe(0);
+    s.close();
+  });
+});

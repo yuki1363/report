@@ -85,3 +85,29 @@ export function applyVoltagePattern<T extends VoltageFields>(c: T, pat: VoltageP
 export function applySystem<T extends VoltageFields>(c: T, system: WiringSystem): T {
   return withPattern(c, system, patternForSystem(system, patternOf(c.useVoltage, c.voltageLabel)));
 }
+
+// ---------------------------------------------------------------------------
+// 以前のデータの電圧を、新しい4パターンに直す
+// ---------------------------------------------------------------------------
+
+/**
+ * 以前の版で入力された電圧（100 / 200 / 400 など、表記なし）を、新しいパターンに直す。
+ * 直し方が決まるものだけ直し、それ以外（例: 1φ2W の 200V）は変えない。
+ *   1φ2W: 100〜110 → 105 ／ 1φ3W: 200〜210 → 105/210 ／ 3φ3W: 200〜210 → 210、400〜440 → 440
+ *   3φ4W（使わなくなった方式）は 3φ3W として、同じ規則で直す
+ * 何度かけても結果は同じ（冪等）。
+ */
+export function normalizeLegacyVoltage<T extends VoltageFields>(c: T): T {
+  const system: WiringSystem = c.system === '3φ4W' ? '3φ3W' : c.system;
+  const v = c.useVoltage;
+  let pat: VoltagePattern | undefined;
+  if (system === '1φ2W' && v >= 100 && v <= 110) pat = patternFor('105');
+  else if (system === '1φ3W' && v >= 200 && v <= 210) pat = patternFor('105/210');
+  else if (system === '3φ3W' && v >= 200 && v <= 210) pat = patternFor('210');
+  else if (system === '3φ3W' && v >= 400 && v <= 440) pat = patternFor('440');
+  if (!pat) return c;
+  // すでに新しいパターンで、方式とも合っていれば変えない
+  const cur = patternOf(c.useVoltage, c.voltageLabel);
+  if (cur && cur.value === pat.value && c.system === system) return c;
+  return withPattern(c, system, pat);
+}

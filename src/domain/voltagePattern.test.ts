@@ -59,3 +59,27 @@ describe('電圧と電気方式の連動', () => {
     expect(patternForSystem('3φ3W', patternFor('105')!).value).toBe('210');
   });
 });
+
+import { normalizeLegacyVoltage } from './voltagePattern.ts';
+
+describe('以前のデータの電圧を新しいパターンに直す', () => {
+  const c = (system: '1φ2W' | '1φ3W' | '3φ3W' | '3φ4W', useVoltage: number, voltageLabel?: string) => ({ system, useVoltage, ...(voltageLabel ? { voltageLabel } : {}), groundVoltage: 0 });
+  it.each([
+    ['1φ2W', 100, '1φ2W', 105, undefined, 105],
+    ['1φ3W', 200, '1φ3W', 210, '105/210', 105],
+    ['1φ3W', 210, '1φ3W', 210, '105/210', 105], // 表記なしの 210 は、1φ3W なので 105/210 に
+    ['3φ3W', 200, '3φ3W', 210, undefined, 210],
+    ['3φ3W', 400, '3φ3W', 440, undefined, 440],
+    ['3φ4W', 400, '3φ3W', 440, undefined, 440], // 使わなくなった 3φ4W
+  ] as const)('%s %dV → %s %d (%s)', (sys, v, outSys, outV, outLabel, ground) => {
+    const r = normalizeLegacyVoltage(c(sys, v));
+    expect(r).toMatchObject({ system: outSys, useVoltage: outV, groundVoltage: ground });
+    expect(r.voltageLabel).toBe(outLabel);
+  });
+  it('直し方が決まらないものは変えない。何度かけても同じ', () => {
+    const odd = c('1φ2W', 200);
+    expect(normalizeLegacyVoltage(odd)).toBe(odd);
+    const fixed = normalizeLegacyVoltage(c('1φ3W', 200));
+    expect(normalizeLegacyVoltage(fixed)).toBe(fixed);
+  });
+});

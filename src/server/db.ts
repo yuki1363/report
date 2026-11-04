@@ -2,6 +2,7 @@
 import Database from 'better-sqlite3';
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { normalizeLegacyVoltage } from '../domain/voltagePattern.ts';
 import { ImportRecordSchema, type ImportRecord } from '../shared/extraction.ts';
 import {
   DEFAULT_SETTINGS,
@@ -61,6 +62,29 @@ export class Store {
         updated_at TEXT NOT NULL
       );
     `);
+    this.migrateVoltagePatterns();
+  }
+
+  /**
+   * 以前の版で入力された電圧（100・200・400 など）を、新しい4パターン（105 / 105/210 / 210 / 440）に直す。
+   * 起動のたびに実行する（直したものは何度かけても同じ結果なので安全）。更新日時は変えない。戻り値は直した報告書の数。
+   */
+  migrateVoltagePatterns(): number {
+    const rows = this.db.prepare('SELECT id, data FROM reports').all() as { id: string; data: string }[];
+    let changed = 0;
+    const update = this.db.prepare('UPDATE reports SET data = ? WHERE id = ?');
+    this.db.transaction(() => {
+      for (const row of rows) {
+        const parsed = ReportSchema.safeParse(safeJson(row.data));
+        if (!parsed.success) continue;
+        const circuits = parsed.data.circuits.map((c) => normalizeLegacyVoltage(c));
+        if (circuits.some((c, i) => c !== parsed.data.circuits[i])) {
+          update.run(JSON.stringify({ ...parsed.data, circuits }), row.id);
+          changed++;
+        }
+      }
+    })();
+    return changed;
   }
 
   listReports(): ReportSummary[] {
@@ -212,12 +236,13 @@ export class Store {
           } else if (!newer('reports', parsed.data.id, row.updated_at)) {
             result.skippedOlder++;
           } else {
+            const report = { ...parsed.data, circuits: parsed.data.circuits.map((c) => normalizeLegacyVoltage(c)) };
             this.db
               .prepare(
                 `INSERT INTO reports (id, data, created_at, updated_at) VALUES (?, ?, ?, ?)
                  ON CONFLICT(id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at`,
               )
-              .run(parsed.data.id, JSON.stringify(parsed.data), row.created_at, row.updated_at);
+              .run(report.id, JSON.stringify(report), row.created_at, row.updated_at);
             result.reports++;
           }
         }
