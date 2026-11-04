@@ -6,7 +6,9 @@ import { applyFreeVoltage, patternForSystem, patternOfText, SYSTEM_OF_PATTERN, V
 import type { ExtractedCircuit, ImportRecord } from '../../shared/extraction.ts';
 import { SELECTABLE_SYSTEMS, type WiringSystem } from '../../shared/schema.ts';
 import { api } from '../api.ts';
+import { ComboInput } from '../ComboInput.tsx';
 import { navigate } from '../nav.ts';
+import { DEVICE_TYPES } from '../../domain/deviceTypes.ts';
 
 type Key = keyof ExtractedCircuit;
 interface PanelState {
@@ -302,16 +304,6 @@ export function ConfirmPage({ id, auto }: { id: string; auto: boolean }) {
           </fieldset>
 
           <div className="grid-wrap">
-            <datalist id="voltage-list-c">
-              {VOLTAGE_PATTERNS.map((p) => (
-                <option key={p.value} value={p.value} />
-              ))}
-            </datalist>
-            <datalist id="device-types-c">
-              {['ELB', 'MCB', 'Mg', 'MCCB', 'NFB', 'ELCB'].map((d) => (
-                <option key={d} value={d} />
-              ))}
-            </datalist>
             <table className="grid confirm-grid">
               <thead>
                 <tr>
@@ -334,7 +326,7 @@ export function ConfirmPage({ id, auto }: { id: string; auto: boolean }) {
                       <input className="name" value={r.name} disabled={confirmed} onChange={(e) => setRow(r.rid, { name: e.target.value }, 'name')} />
                     </td>
                     <td>
-                      <input className="dev" list="device-types-c" value={r.deviceType} disabled={confirmed} onChange={(e) => setRow(r.rid, { deviceType: e.target.value })} />
+<ComboInput className="dev" value={r.deviceType} options={DEVICE_TYPES} disabled={confirmed} onChange={(t) => setRow(r.rid, { deviceType: t })} />
                     </td>
                     <td className={uncCls(r.unc.breakerA)} title={r.unc.breakerA}>
                       <input className="volt" inputMode="decimal" value={r.breakerA} disabled={confirmed} onChange={(e) => setRow(r.rid, { breakerA: e.target.value }, 'breakerA')} />
@@ -353,15 +345,14 @@ export function ConfirmPage({ id, auto }: { id: string; auto: boolean }) {
                       </select>
                     </td>
                     <td className={uncCls(r.unc.useVoltage)} title={r.unc.useVoltage}>
-<input
+<ComboInput
                         className={`volt ${r.useVoltage.trim() && !((parseVoltage(r.useVoltage) ?? 0) > 0) ? 'invalid' : ''}`}
-                        list="voltage-list-c"
+                        options={VOLTAGE_PATTERNS.map((p) => p.value)}
                         value={r.useVoltage}
                         disabled={confirmed}
                         title="自由に書けます。候補の 105 / 105/210 / 210 / 440 を書くと、電気方式も連動します。空欄にすると電気方式も空欄になります"
-                        onChange={(e) => {
+                        onChange={(t) => {
                           // 4パターンなら電気方式も連動して決まる。空欄なら電気方式も空欄。それ以外は書いたとおり（電気方式は変えない）
-                          const t = e.target.value;
                           const sys = SYSTEM_OF_PATTERN[patternOfText(t)?.value ?? ''];
                           setRow(r.rid, { useVoltage: t, ...(sys ? { system: sys } : t.trim() === '' ? { system: '' as const } : {}) }, 'useVoltage');
                         }}

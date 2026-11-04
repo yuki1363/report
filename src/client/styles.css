@@ -195,3 +195,14 @@ table.grid input.dev { width: 4.5em; }
 .inline-label-row { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
 table.list th.chk, table.list td.chk { width: 2em; text-align: center; }
 table.list tr.picked td { background: #eff6ff; }
+
+/* --- 候補つきの入力欄（種別・使用電圧） --- */
+.combo { display: inline-flex; align-items: stretch; width: 100%; }
+.combo input { flex: 1; min-width: 0; }
+.combo-btn { border: none; background: transparent; padding: 0 3px; color: var(--muted); font-size: 11px; cursor: pointer; border-radius: 0; }
+.combo-btn:hover { background: #e5e7eb; }
+.combo-pop { position: fixed; z-index: 50; margin: 0; padding: 2px 0; list-style: none; background: #fff; border: 1px solid #9ca3af; border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,.2); max-height: 260px; overflow: auto; }
+.combo-pop li { padding: 4px 10px; cursor: pointer; white-space: nowrap; }
+.combo-pop li:hover { background: #dbeafe; }
+.combo-pop li.on { font-weight: bold; background: #eff6ff; }
+table.grid td .combo input { width: auto; }

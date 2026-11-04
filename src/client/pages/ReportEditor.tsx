@@ -20,6 +20,8 @@ import {
 } from '../../shared/schema.ts';
 import { api, type TemplateSummary } from '../api.ts';
 import { MeggerDialog } from '../MeggerDialog.tsx';
+import { DEVICE_TYPES } from '../../domain/deviceTypes.ts';
+import { ComboInput } from '../ComboInput.tsx';
 import { PasteDialog } from '../PasteDialog.tsx';
 import type { PastedCircuit } from '../../domain/pasteCircuits.ts';
 import { SheetEditor } from '../SheetEditor.tsx';
@@ -489,11 +491,16 @@ function VoltageInput({
   const v = parseVoltage(text);
   const invalid = text.trim() !== '' && (v === undefined || Number.isNaN(v) || v <= 0);
   return (
-    <input
+    <ComboInput
       {...rest}
       className={`${className ?? ''} ${invalid ? 'invalid' : ''}`}
-      list="voltage-list"
+      options={VOLTAGE_PATTERNS.map((p) => p.value)}
       value={text}
+      onPick={(t) => {
+        // 候補を選んだら、その場で確定する（電気方式も連動）
+        setText(t);
+        onCommit(t);
+      }}
       title="自由に書けます（例: 105/210、200、100/200V）。候補の 105 / 105/210 / 210 / 440 を書くと、電気方式も連動します。空欄にすると電気方式も空欄になります"
       onFocus={(e) => {
         focused.current = true;
@@ -508,7 +515,7 @@ function VoltageInput({
         // Enter で確定してから、表の移動（下の行へ）に渡す
         if (e.key === 'Enter' && text !== shown) onCommit(text);
       }}
-      onChange={(e) => setText(e.target.value)}
+      onChange={(t) => setText(t)}
     />
   );
 }
@@ -623,16 +630,6 @@ function CircuitGrid({
 
   return (
     <div className="grid-wrap">
-      <datalist id="voltage-list">
-        {VOLTAGE_PATTERNS.map((p) => (
-          <option key={p.value} value={p.value} />
-        ))}
-      </datalist>
-      <datalist id="device-types">
-        {['ELB', 'MCB', 'Mg', 'MCCB', 'NFB', 'ELCB'].map((d) => (
-          <option key={d} value={d} />
-        ))}
-      </datalist>
       <table
         className="grid"
         ref={gridRef}
@@ -678,15 +675,15 @@ function CircuitGrid({
                   <input className="name" value={c.name} {...cellProps(i, 'name')} onChange={(e) => updateCircuit(c.id, (x) => ({ ...x, name: e.target.value }))} />
                 </td>
                 <td>
-                  <input
+                  <ComboInput
                     className="dev"
-                    list="device-types"
                     value={c.deviceType ?? ''}
+                    options={DEVICE_TYPES}
                     {...cellProps(i, 'deviceType')}
-                    onChange={(e) =>
+                    onChange={(text) =>
                       updateCircuit(c.id, (x) => {
                         const { deviceType: _d, ...rest } = x;
-                        return e.target.value ? { ...rest, deviceType: e.target.value } : rest;
+                        return text ? { ...rest, deviceType: text } : rest;
                       })
                     }
                   />
