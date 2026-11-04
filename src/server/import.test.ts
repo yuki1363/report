@@ -205,3 +205,38 @@ describe('以前の版の電圧の自動修正', () => {
     s.close();
   });
 });
+
+describe('一括印刷・選択印刷（PDF をまとめる）', () => {
+  it('指定した順番どおりに、報告書ごとの PDF を1つにまとめる', async () => {
+    const { PDFDocument } = await import('pdf-lib');
+    // 報告書ごとにページ数の違う PDF を返す（盤名で 1〜3 ページ）
+    const pagesBy: Record<string, number> = { 'P-1': 1, 'P-2': 3, 'P-3': 2 };
+    const printApp = createApp({
+      store,
+      dataDir,
+      pdf: async (html) => {
+        const n = Object.entries(pagesBy).find(([name]) => html.includes(name))?.[1] ?? 1;
+        const doc = await PDFDocument.create();
+        for (let i = 0; i < n; i++) doc.addPage([595, 842]);
+        return Buffer.from(await doc.save());
+      },
+    });
+    const mk = (name: string) => store.saveReport({ id: `print-${name}`, templateId: 'default', panel: { name }, date: '2026-11-04', inspector: '', instrument: { model: '' }, circuits: [], sourceFiles: [] });
+    for (const n of Object.keys(pagesBy)) mk(n);
+    const post = (ids: string[]) =>
+      printApp.request(base + '/api/print', { method: 'POST', body: JSON.stringify({ ids }), headers: { ...H, 'content-type': 'application/json' } });
+    const pages = async (res: Response) => (await PDFDocument.load(new Uint8Array(await res.arrayBuffer()))).getPageCount();
+
+    const all = await post(['print-P-1', 'print-P-2', 'print-P-3']);
+    expect(all.status).toBe(200);
+    expect(all.headers.get('content-type')).toBe('application/pdf');
+    expect(all.headers.get('content-disposition')).toContain('3%E4%BB%B6'); // 「3件」
+    expect(await pages(all)).toBe(1 + 3 + 2);
+    expect(await pages(await post(['print-P-3', 'print-P-1']))).toBe(2 + 1); // 選択印刷（一部）
+    expect(await pages(await post(['print-P-2']))).toBe(3); // 1件だけ
+    const missing = await post(['print-P-1', 'no-such-id']);
+    expect(missing.status).toBe(404);
+    expect(((await missing.json()) as { error: string }).error).toContain('見つかりません');
+    expect((await post([])).status).toBe(400);
+  });
+});

@@ -637,7 +637,7 @@ function CircuitGrid({
             <th rowSpan={2}>基準値</th>
             <th rowSpan={2}>判定</th>
             <th rowSpan={2}>備考</th>
-            <th rowSpan={2}></th>
+            <th rowSpan={2} className="sticky-actions">操作</th>
           </tr>
           <tr>
             {READING_KEYS.map((k) => (
@@ -756,7 +756,7 @@ function CircuitGrid({
                 <td>
                   <input className="note" value={c.note ?? ''} {...cellProps(i, 'note')} onChange={(e) => updateCircuit(c.id, (x) => ({ ...x, note: e.target.value }))} />
                 </td>
-                <td className="row-actions">
+                <td className="row-actions sticky-actions">
                   <button tabIndex={-1} title="上へ" onClick={() => moveCircuit(i, -1)}>
                     ↑
                   </button>
@@ -769,10 +769,10 @@ function CircuitGrid({
                   <button
                     tabIndex={-1}
                     className="danger"
-                    title="削除"
+                    title="この回路を削除"
                     onClick={() => confirm(`回路「${c.no} ${c.name}」を削除しますか？`) && removeCircuit(c.id)}
                   >
-                    ×
+                    削除
                   </button>
                 </td>
               </tr>

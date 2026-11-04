@@ -20,9 +20,10 @@ import {
 import type { Store } from './db.ts';
 import { sheetToXlsx } from '../domain/excel.ts';
 import { defaultExtractors, registerImportRoutes, type Extractors } from './importRoutes.ts';
+import { mergePdfs } from './mergePdf.ts';
 import { htmlToPdf, PdfBrowserError } from './pdf.ts';
 import { claudeModel } from './extract/claude.ts';
-import { deriveReport, newReport } from './reportFactory.ts';
+import { deriveReport, newReport, todayLocal } from './reportFactory.ts';
 import { builtinTemplates } from './templates.ts';
 
 export { deriveReport, newReport, todayLocal } from './reportFactory.ts';
@@ -40,6 +41,7 @@ export interface AppDeps {
 
 const CreateBodySchema = z.object({ from: z.string().optional(), mode: z.enum(['copy', 'inherit']).optional() });
 const TemplateBodySchema = z.object({ name: z.string().trim().min(1).max(100), sheet: SheetSchema });
+const PrintBodySchema = z.object({ ids: z.array(z.string()).min(1).max(200) });
 const RenderBodySchema = z.object({ sheet: SheetSchema, report: ReportSchema });
 
 /** 変更系リクエストで、他サイトからの送信（CSRF）を防ぐための独自ヘッダ（multipart 用） */
@@ -175,6 +177,28 @@ export function createApp({ store, dataDir, paths, pdf = htmlToPdf, extractors =
     return c.body(new Uint8Array(buf), 200, {
       'Content-Type': 'application/pdf',
       'Content-Disposition': contentDisposition(attachmentName(r, 'pdf')),
+    });
+  });
+
+  /**
+   * 一括印刷・選択印刷: 指定した報告書（順番どおり）を、1つの PDF にまとめて返す。
+   * 報告書ごとに書式（A4縦など）が違っても、それぞれの用紙設定のまま並べる。
+   */
+  app.post('/api/print', async (c) => {
+    const { ids } = PrintBodySchema.parse(await c.req.json());
+    const reports: Report[] = [];
+    for (const id of ids) {
+      const r = store.getReport(id);
+      if (!r) return c.json({ error: `報告書が見つかりません（削除された可能性があります）: ${id}` }, 404);
+      reports.push(r);
+    }
+    const parts: Uint8Array[] = [];
+    for (const r of reports) parts.push(await pdf(renderReport(r)));
+    const merged = parts.length === 1 ? parts[0]! : await mergePdfs(parts);
+    const day = todayLocal();
+    return c.body(new Uint8Array(merged), 200, {
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': contentDisposition(`絶縁抵抗測定報告書_${reports.length}件_${day}.pdf`),
     });
   });
 

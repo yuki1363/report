@@ -25,6 +25,7 @@
     "dotenv": "^18.0.9",
     "exceljs": "^4.4.0",
     "hono": "^4.13.16",
+    "pdf-lib": "^1.17.1",
     "pdfjs-dist": "^6.5.438",
     "playwright-core": "^1.64.1",
     "react": "^19.3.1",
