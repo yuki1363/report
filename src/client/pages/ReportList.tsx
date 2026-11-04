@@ -41,7 +41,7 @@ export function ReportList() {
 
   const remove = (r: ReportSummary) =>
     run(async () => {
-      if (!confirm(`「${r.panelName || '無題'}」（${r.date}）を削除します。よろしいですか？`)) return;
+      if (!confirm(`「${r.panelName || '無題'}」${r.date ? `（${r.date}）` : ''}を削除します。よろしいですか？`)) return;
       await api.deleteReport(r.id);
       await load();
     });
@@ -50,7 +50,7 @@ export function ReportList() {
   const sorted = useMemo(() => {
     const list = [...(items ?? [])];
     if (sort === 'name') list.sort(byName);
-    else if (sort === 'date') list.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : byName(a, b)));
+    else if (sort === 'date') list.sort((a, b) => (a.date === b.date ? byName(a, b) : !a.date ? 1 : !b.date ? -1 : a.date < b.date ? 1 : -1)); // 空欄は最後
     return list; // updated は API の順（更新が新しい順）
   }, [items, sort]);
 
@@ -167,7 +167,7 @@ export function ReportList() {
                     <a href={`#/reports/${r.id}`}>{r.panelName || '（無題）'}</a>
                   </td>
                   <td>{r.location}</td>
-                  <td>{r.date}</td>
+                  <td>{r.date || <span className="muted">（空欄）</span>}</td>
                   <td className="num">{r.circuitCount}</td>
                   <td>{new Date(r.updatedAt).toLocaleString('ja-JP')}</td>
                   <td className="actions">

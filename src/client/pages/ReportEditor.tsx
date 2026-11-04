@@ -3,7 +3,7 @@ import { autoGroundVoltage, DEFAULT_USE_VOLTAGE } from '../../domain/groundVolta
 import { defaultTestVoltage } from '../../domain/importing.ts';
 import { newCircuit } from '../../domain/newCircuit.ts';
 import { parseVoltage } from '../../domain/system.ts';
-import { applyBlank, applySystem, applyVoltagePattern, patternFor, patternOf, VOLTAGE_PATTERNS, type VoltagePattern } from '../../domain/voltagePattern.ts';
+import { applyFreeVoltage, applySystem, patternOf, VOLTAGE_PATTERNS, voltageText } from '../../domain/voltagePattern.ts';
 import { isLowVoltage, LOW_VOLTAGE_MAX_V } from '../../domain/judgment.ts';
 import { judgeCircuit, VERDICT_LABEL, type Verdict } from '../../domain/judgment.ts';
 import { formatReading, parseReading } from '../../domain/reading.ts';
@@ -395,8 +395,15 @@ function HeaderForm({
         />
       </label>
       <label>
-        測定日
-        <input type="date" value={report.date} onChange={(e) => update((r) => ({ ...r, date: e.target.value }))} />
+        測定日（空欄でも可。カレンダーから選べます）
+        <span className="row">
+          <input type="date" value={report.date} onChange={(e) => update((r) => ({ ...r, date: e.target.value }))} />
+          {report.date && (
+            <button type="button" title="測定日を空欄に戻す" onClick={() => update((r) => ({ ...r, date: '' }))}>
+              消す
+            </button>
+          )}
+        </span>
       </label>
       <label className="short">
         温度[℃]
@@ -463,38 +470,46 @@ function NumInput({
 }
 
 /**
- * 使用電圧の選択（105 / 105/210 / 210 / 440）。
- * 以前の入力など、パターンにない値は「（200V）」として残し、選び直すまでそのまま使う。
+ * 使用電圧の入力欄。自由に書ける（候補: 105 / 105/210 / 210 / 440）。
+ * 候補のどれかを書くと、電気方式も連動して決まる。それ以外（200V・100/200 など）は書いたとおりに帳票へ出す。
+ * 空欄にすると、電気方式も空欄になる。確定は、欄から出たとき（Tab・クリック）か Enter。
  */
-function VoltageSelect({
+function VoltageInput({
   circuit,
-  onPick,
+  onCommit,
   className,
   ...rest
-}: { circuit: Circuit; onPick: (p: VoltagePattern | null) => void; className?: string } & Record<string, unknown>) {
-  const blank = circuit.useVoltage <= 0;
-  const cur = patternOf(circuit.useVoltage, circuit.voltageLabel);
-  const extra = cur || blank ? undefined : (circuit.voltageLabel ?? String(circuit.useVoltage));
+}: { circuit: Circuit; onCommit: (text: string) => void; className?: string } & Record<string, unknown>) {
+  const shown = voltageText(circuit);
+  const [text, setText] = useState(shown);
+  const focused = useRef(false);
+  useEffect(() => {
+    if (!focused.current) setText(shown);
+  }, [shown]);
+  const v = parseVoltage(text);
+  const invalid = text.trim() !== '' && (v === undefined || Number.isNaN(v) || v <= 0);
   return (
-    <select
+    <input
       {...rest}
-      className={className}
-      value={blank ? '' : (cur?.value ?? extra)}
-      title="使用電圧（105/210 は単相3線。判定には大きい方の 210V を使います）。空欄にすると電気方式も空欄になります"
-      onChange={(e) => {
-        const p = patternFor(e.target.value);
-        if (p) onPick(p);
-        else if (e.target.value === '') onPick(null);
+      className={`${className ?? ''} ${invalid ? 'invalid' : ''}`}
+      list="voltage-list"
+      value={text}
+      title="自由に書けます（例: 105/210、200、100/200V）。候補の 105 / 105/210 / 210 / 440 を書くと、電気方式も連動します。空欄にすると電気方式も空欄になります"
+      onFocus={(e) => {
+        focused.current = true;
+        e.target.select();
       }}
-    >
-      <option value="">（空欄）</option>
-      {extra !== undefined && <option value={extra}>（{extra}）</option>}
-      {VOLTAGE_PATTERNS.map((p) => (
-        <option key={p.value} value={p.value}>
-          {p.value}
-        </option>
-      ))}
-    </select>
+      onBlur={() => {
+        focused.current = false;
+        if (text !== shown) onCommit(text);
+        else setText(shown);
+      }}
+      onKeyDown={(e) => {
+        // Enter で確定してから、表の移動（下の行へ）に渡す
+        if (e.key === 'Enter' && text !== shown) onCommit(text);
+      }}
+      onChange={(e) => setText(e.target.value)}
+    />
   );
 }
 
@@ -608,6 +623,11 @@ function CircuitGrid({
 
   return (
     <div className="grid-wrap">
+      <datalist id="voltage-list">
+        {VOLTAGE_PATTERNS.map((p) => (
+          <option key={p.value} value={p.value} />
+        ))}
+      </datalist>
       <datalist id="device-types">
         {['ELB', 'MCB', 'Mg', 'MCCB', 'NFB', 'ELCB'].map((d) => (
           <option key={d} value={d} />
@@ -698,11 +718,11 @@ function CircuitGrid({
                   </select>
                 </td>
                 <td>
-                  <VoltageSelect
+                  <VoltageInput
                     className={`volt ${isLowVoltage(c.useVoltage) ? '' : 'invalid'}`}
                     circuit={c}
                     {...cellProps(i, 'useVoltage')}
-                    onPick={(pat) => updateCircuit(c.id, (x) => (pat ? applyVoltagePattern(x, pat) : applyBlank(x)))}
+                    onCommit={(text) => updateCircuit(c.id, (x) => applyFreeVoltage(x, text))}
                   />
                 </td>
                 {showVolt && (

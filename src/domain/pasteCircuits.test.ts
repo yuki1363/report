@@ -36,19 +36,28 @@ describe('回路の貼り付け（回路No / 回路名称 / 種別 / 容量 / �
     const r = parsePastedCircuits('1  照明 1F  ELB  20  1φ3W  105/210', d);
     expect(r.circuits[0]).toMatchObject({ no: '1', name: '照明 1F', deviceType: 'ELB', breakerA: 20, system: '1φ3W', useVoltage: 210, voltageLabel: '105/210' });
   });
-  it('3φ4W は使えない。方式と電圧の組み合わせが合わない行も弾く', () => {
+  it('3φ4W は使えない。電気方式と電圧を両方書いた行は、組み合わせが合わなくても書いたとおりに取り込む', () => {
     const r = parsePastedCircuits('1\tA\t\t\t3φ4W\t440\n2\tB\t\t\t1φ3W\t440\n3\tC\t\t\t3φ3W\t105\n4\tD\t\t\t3φ3W\t210', d);
-    expect(r.circuits.map((c) => c.no)).toEqual(['4']);
+    expect(r.circuits.map((c) => `${c.no}:${c.system}:${c.useVoltage}`)).toEqual(['2:1φ3W:440', '3:3φ3W:105', '4:3φ3W:210']);
+    expect(r.errors).toHaveLength(1);
     expect(r.errors[0]!.reason).toContain('使えません');
-    expect(r.errors[1]!.reason).toContain('105/210 です');
-    expect(r.errors[2]!.reason).toContain('210 または 440');
   });
-  it('高圧・パターン外の電圧・数値でない値は理由つきで弾き、他の行は取り込む', () => {
-    const r = parsePastedCircuits('1\t高圧受電\t\t\t\t6600\n2\tB\t\t\t\t200\n3\tC\t\t\t\tabc\n4\tD\t\t-5\t\t210\n5\tE', d);
-    expect(r.errors.map((e) => e.line)).toEqual([1, 2, 3, 4]);
+  it('電圧は自由に書ける（4パターン以外も、書いたとおり）。電気方式は書かれていればそのまま、無ければ空欄', () => {
+    const r = parsePastedCircuits('1\tA\t\t\t\t200V\n2\tB\t\t\t\t100/200\n3\tC\t\t\t1φ3W\t１００／２００V\n4\tD\t\t\t\t210', d);
+    expect(r.errors).toEqual([]);
+    expect(r.circuits.map((c) => `${c.system || '空欄'}:${c.useVoltage}:${c.voltageLabel ?? '-'}`)).toEqual([
+      '空欄:200:-', // 数字だけなら表記は持たない（帳票には 200）
+      '空欄:200:100/200', // 判定には大きい方、帳票には書いたとおり
+      '1φ3W:200:100/200',
+      '3φ3W:210:-', // 4パターンのどれかなら、電気方式が決まる
+    ]);
+  });
+  it('高圧・数値でない値・容量の誤りは理由つきで弾き、他の行は取り込む', () => {
+    const r = parsePastedCircuits('1\t高圧受電\t\t\t\t6600\n2\tB\t\t\t\tabc\n3\tC\t\t-5\t\t210\n4\tD\t\t\t\t200\n5\tE', d);
+    expect(r.errors.map((e) => e.line)).toEqual([1, 2, 3]);
     expect(r.errors[0]!.reason).toContain('低圧');
-    expect(r.errors[1]!.reason).toContain('105 / 105/210 / 210 / 440');
-    expect(r.errors[3]!.reason).toContain('容量');
-    expect(r.circuits.map((c) => c.no)).toEqual(['5']);
+    expect(r.errors[1]!.reason).toContain('数値ではありません');
+    expect(r.errors[2]!.reason).toContain('容量');
+    expect(r.circuits.map((c) => c.no)).toEqual(['4', '5']);
   });
 });

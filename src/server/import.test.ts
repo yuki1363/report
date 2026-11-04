@@ -197,11 +197,11 @@ describe('以前の版の電圧の自動修正', () => {
     s.saveReport({ id: 'legacy', templateId: 'default', panel: { name: '旧' }, date: '2026-01-01', inspector: '', instrument: { model: '' }, sourceFiles: [],
       circuits: [c('a', '1φ3W', 200), c('b', '3φ3W', 400), c('c', '3φ4W', 400), c('d', '1φ2W', 200)] });
     const before = s.listReports()[0]!.updatedAt;
-    expect(s.migrateVoltagePatterns()).toBe(1);
+    expect(s.migrateVoltagePatterns(true)).toBe(1);
     const r = s.getReport('legacy')!;
     expect(r.circuits.map((x) => `${x.system}:${x.voltageLabel ?? x.useVoltage}:${x.groundVoltage}`)).toEqual(['1φ3W:105/210:105', '3φ3W:440:440', '3φ3W:440:440', '1φ2W:200:0']);
     expect(s.listReports()[0]!.updatedAt).toBe(before);
-    expect(s.migrateVoltagePatterns()).toBe(0);
+    expect(s.migrateVoltagePatterns(true)).toBe(0);
     s.close();
   });
 });

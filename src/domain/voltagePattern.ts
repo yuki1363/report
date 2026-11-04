@@ -1,5 +1,6 @@
 import type { Circuit, WiringSystem } from '../shared/schema.ts';
 import { autoGroundVoltage } from './groundVoltage.ts';
+import { normalizeVoltageText, parseVoltage } from './system.ts';
 
 /**
  * 使用電圧のパターン（選択肢）: 105 / 105/210 / 210 / 440
@@ -90,8 +91,40 @@ export function applyBlank<T extends VoltageFields>(c: T): T {
 /** 電気方式を選んだとき: 電圧が合わなければ、その方式の既定の電圧にする。空欄（''）なら電圧も空欄 */
 export function applySystem<T extends VoltageFields>(c: T, system: WiringSystem | ''): T {
   if (system === '') return applyBlank(c);
-  return withPattern(c, system, patternForSystem(system, patternOf(c.useVoltage, c.voltageLabel)));
+  const cur = patternOf(c.useVoltage, c.voltageLabel);
+  // 自由に書かれた電圧（4パターン以外）は、方式を変えても書いたまま残す
+  if (!cur && (c.useVoltage > 0 || c.voltageLabel)) {
+    return { ...c, system, groundVoltage: c.useVoltage > 0 ? autoGroundVoltage(system, c.useVoltage) : 0 };
+  }
+  return withPattern(c, system, patternForSystem(system, cur));
 }
+
+/**
+ * 電圧を自由に書いたとき（入力欄に直接書く）。
+ * - 空欄 → 電気方式も空欄
+ * - 4パターンのどれか → 電気方式も連動して決まる
+ * - それ以外（200V・100/200 など）→ 書いたとおりに帳票へ出し、電気方式は変えない。
+ *   数字として読めれば（「100/200」は大きい方）判定に使う。読めなければ使用電圧は 0（判定しない）
+ */
+export function applyFreeVoltage<T extends VoltageFields>(c: T, text: string): T {
+  const t = normalizeVoltageText(text);
+  if (t === '') return applyBlank(c);
+  const pat = patternOfText(t);
+  if (pat) return applyVoltagePattern(c, pat);
+  const v = parseVoltage(t);
+  const use = v !== undefined && Number.isFinite(v) && v > 0 ? v : 0;
+  const { voltageLabel: _l, ...rest } = c;
+  const label = use > 0 && String(use) === t ? undefined : t; // 数字だけの書き方なら、表記は持たない
+  return {
+    ...rest,
+    ...(label ? { voltageLabel: label } : {}),
+    useVoltage: use,
+    groundVoltage: c.system && use > 0 ? autoGroundVoltage(c.system, use) : 0,
+  } as T;
+}
+
+/** 入力欄に出す電圧の文字（書いた表記があればそれ、なければ数値。空欄なら空） */
+export const voltageText = (c: { useVoltage: number; voltageLabel?: string }): string => c.voltageLabel ?? (c.useVoltage > 0 ? String(c.useVoltage) : '');
 
 // ---------------------------------------------------------------------------
 // 以前のデータの電圧を、新しい4パターンに直す

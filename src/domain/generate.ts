@@ -83,7 +83,7 @@ function circuitValues(c: Circuit, index: number, criteria: Criteria): Record<st
     'c.deviceType': c.deviceType ?? '',
     'c.system': c.system,
     // 電気方式が空欄の回路は、使用電圧・対地電圧・基準値も空欄
-    'c.useVoltage': c.useVoltage > 0 ? (c.voltageLabel ?? String(c.useVoltage)) : '',
+    'c.useVoltage': c.voltageLabel ?? (c.useVoltage > 0 ? String(c.useVoltage) : ''),
     'c.groundVoltage': c.useVoltage > 0 ? String(c.groundVoltage) : '',
     'c.testVoltage': String(c.testVoltage),
     'c.breakerA': str(c.breakerA),

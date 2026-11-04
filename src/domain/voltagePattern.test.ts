@@ -99,3 +99,29 @@ describe('電気方式の空欄', () => {
     expect(normalizeLegacyVoltage(blank)).toBe(blank);
   });
 });
+
+import { applyFreeVoltage, voltageText } from './voltagePattern.ts';
+
+describe('電圧を自由に書く', () => {
+  const c = (system: '' | '1φ2W' | '1φ3W' | '3φ3W', useVoltage: number, voltageLabel?: string) => ({ system, useVoltage, ...(voltageLabel ? { voltageLabel } : {}), groundVoltage: 0 });
+  it('4パターンを書くと電気方式も連動、空欄なら電気方式も空欄', () => {
+    expect(applyFreeVoltage(c('', 0), '105/210')).toMatchObject({ system: '1φ3W', useVoltage: 210, voltageLabel: '105/210', groundVoltage: 105 });
+    expect(applyFreeVoltage(c('1φ3W', 210, '105/210'), '440V')).toMatchObject({ system: '3φ3W', useVoltage: 440 });
+    expect(applyFreeVoltage(c('3φ3W', 440), '')).toEqual({ system: '', useVoltage: 0, groundVoltage: 0 });
+  });
+  it('それ以外は書いたとおり。電気方式は変えず、数字として読めれば判定に使う（大きい方）', () => {
+    const a = applyFreeVoltage(c('1φ3W', 210, '105/210'), '100/200V');
+    expect(a).toMatchObject({ system: '1φ3W', useVoltage: 200, voltageLabel: '100/200', groundVoltage: 100 });
+    expect(voltageText(a)).toBe('100/200');
+    const b = applyFreeVoltage(c('3φ3W', 210), '200');
+    expect(b.voltageLabel).toBeUndefined(); // 数字だけなら表記は持たない
+    expect(voltageText(b)).toBe('200');
+    const x = applyFreeVoltage(c('3φ3W', 210), 'AC200');
+    expect(x).toMatchObject({ useVoltage: 0, voltageLabel: 'AC200' }); // 読めない書き方は、帳票には出すが判定しない
+    expect(voltageText(x)).toBe('AC200');
+  });
+  it('自由に書いた電圧は、電気方式を変えても書いたまま残る', () => {
+    const free = applyFreeVoltage(c('3φ3W', 210), '100/200');
+    expect(applySystem(free, '1φ3W')).toMatchObject({ system: '1φ3W', useVoltage: 200, voltageLabel: '100/200', groundVoltage: 100 });
+  });
+});

@@ -11,7 +11,8 @@ export function newReport(): Report {
     id: randomUUID(),
     templateId: 'default',
     panel: { name: '' },
-    date: todayLocal(),
+    // 測定日は最初は空欄（画面のカレンダーで選ぶ）
+    date: '',
     inspector: '',
     instrument: { model: '' },
     circuits: [],
@@ -27,7 +28,7 @@ export function newReport(): Report {
 export function deriveReport(src: Report, mode: 'copy' | 'inherit'): Report {
   const base = structuredClone(src);
   base.id = randomUUID();
-  base.date = todayLocal();
+  base.date = ''; // 測定日は引き継がない（空欄。カレンダーで選ぶ）
   base.circuits = base.circuits.map((c) => ({ ...c, id: randomUUID(), readings: mode === 'copy' ? c.readings : {} }));
   if (mode === 'inherit') {
     delete base.tempC;

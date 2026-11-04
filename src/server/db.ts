@@ -67,9 +67,12 @@ export class Store {
 
   /**
    * 以前の版で入力された電圧（100・200・400 など）を、新しい4パターン（105 / 105/210 / 210 / 440）に直す。
-   * 起動のたびに実行する（直したものは何度かけても同じ結果なので安全）。更新日時は変えない。戻り値は直した報告書の数。
+   * 一度だけ実行する（電圧は自由に書けるため、以後に書いた電圧は書き換えない）。更新日時は変えない。戻り値は直した報告書の数。
    */
-  migrateVoltagePatterns(): number {
+  migrateVoltagePatterns(force = false): number {
+    // 電圧は自由に書けるため、直すのは一度だけ（以後に自由に書いた電圧を、再起動で書き換えない）
+    const done = this.db.prepare("SELECT value FROM settings WHERE key = 'voltage_patterns_migrated'").get();
+    if (done && !force) return 0;
     const rows = this.db.prepare('SELECT id, data FROM reports').all() as { id: string; data: string }[];
     let changed = 0;
     const update = this.db.prepare('UPDATE reports SET data = ? WHERE id = ?');
@@ -84,6 +87,7 @@ export class Store {
         }
       }
     })();
+    this.db.prepare("INSERT INTO settings (key, value) VALUES ('voltage_patterns_migrated', '1') ON CONFLICT(key) DO NOTHING").run();
     return changed;
   }
 
@@ -236,7 +240,7 @@ export class Store {
           } else if (!newer('reports', parsed.data.id, row.updated_at)) {
             result.skippedOlder++;
           } else {
-            const report = { ...parsed.data, circuits: parsed.data.circuits.map((c) => normalizeLegacyVoltage(c)) };
+            const report = parsed.data;
             this.db
               .prepare(
                 `INSERT INTO reports (id, data, created_at, updated_at) VALUES (?, ?, ?, ?)

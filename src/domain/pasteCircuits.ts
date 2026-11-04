@@ -3,24 +3,17 @@
  *
  * 列の順（帳票の列の順）: 回路No ／ 回路名称 ／ 種別（ELB・MCB・Mg など） ／ 容量[A] ／ 電気方式 ／ 使用電圧
  * - 区切りはタブ（Excel からのコピー）か、2つ以上の空白
+ * - 使用電圧は自由に書ける（4パターン以外も、書いたとおりに帳票へ出す。数字として読めることが必要）
  * - 電気方式と使用電圧は連動する（1φ2W=105 ／ 1φ3W=105/210 ／ 3φ3W=210 か 440）
- *   - どちらか一方だけ書かれていれば、もう一方は連動して決まる
+ *   - 電圧が4パターンのどれかで電気方式が空欄なら、電気方式が決まる。電気方式だけなら、電圧が決まる
+ *   - 両方書かれていれば、組み合わせが合わなくても書いたとおりに取り込む
  *   - どちらも空欄・列なしなら、既定の電圧（画面で指定）から決まる。既定が「空欄」なら、電気方式も電圧も空欄
  * - 1行目が見出し（「No」「回路」「負荷」を含む）なら読み飛ばす
  */
 import { SELECTABLE_SYSTEMS, type WiringSystem } from '../shared/schema.ts';
 import { LOW_VOLTAGE_MAX_V } from './judgment.ts';
-import { normalizeSystem, parseVoltage, toHalf } from './system.ts';
-import {
-  allowedTogether,
-  patternForSystem,
-  patternOfText,
-  patternsOfSystem,
-  SYSTEM_OF_PATTERN,
-  VOLTAGE_PATTERN_TEXT,
-  VOLTAGE_PATTERNS,
-  type VoltagePattern,
-} from './voltagePattern.ts';
+import { normalizeSystem, normalizeVoltageText, parseVoltage, toHalf } from './system.ts';
+import { patternForSystem, patternOfText, SYSTEM_OF_PATTERN, VOLTAGE_PATTERNS, type VoltagePattern } from './voltagePattern.ts';
 
 export interface PastedCircuit {
   no: string;
@@ -101,19 +94,23 @@ export function parsePastedCircuits(text: string, defaults: PasteDefaults): Past
     }
     // 使用電圧
     let pattern: VoltagePattern | undefined;
+    let free: { useVoltage: number; label?: string } | undefined; // 4パターン以外で、自由に書かれた電圧
     if (voltText) {
       const v = parseVoltage(voltText);
       if (v === undefined || Number.isNaN(v) || v <= 0) return fail(`使用電圧「${voltText}」が数値ではありません`);
       if (v > LOW_VOLTAGE_MAX_V) return fail(`使用電圧 ${v}V は低圧（${LOW_VOLTAGE_MAX_V}V 以下）の範囲外です`);
       pattern = patternOfText(voltText);
-      if (!pattern) return fail(`電圧「${voltText}」は ${VOLTAGE_PATTERN_TEXT} のいずれかにしてください`);
+      if (!pattern) {
+        const t = normalizeVoltageText(voltText);
+        free = { useVoltage: v, ...(String(v) === t ? {} : { label: t }) }; // 書いたとおりに残す
+      }
     }
     // 連動
-    if (system && pattern) {
-      if (!allowedTogether(system, pattern)) {
-        const ok = patternsOfSystem(system).map((p) => p.value).join(' または ');
-        return fail(`電気方式 ${system} で選べる電圧は ${ok} です（「${voltText}」は選べません）`);
-      }
+    if (free) {
+      // 自由な電圧: 電気方式は書かれていればそれ、無ければ空欄のまま（勝手に決めない）
+      if (system === undefined) system = '';
+    } else if (system && pattern) {
+      // 方式も電圧も書かれていれば、組み合わせが合わなくても書いたとおりに取り込む
     } else if (system) {
       pattern = patternForSystem(system, defaultPattern); // 方式だけ → 既定の電圧が合えばそれ、合わなければ方式の既定
     } else if (pattern) {
@@ -131,8 +128,8 @@ export function parsePastedCircuits(text: string, defaults: PasteDefaults): Past
       name,
       system: system ?? '',
       ...(deviceType ? { deviceType } : {}),
-      useVoltage: pattern?.useVoltage ?? 0,
-      ...(pattern?.label ? { voltageLabel: pattern.label } : {}),
+      useVoltage: free?.useVoltage ?? pattern?.useVoltage ?? 0,
+      ...((free?.label ?? pattern?.label) ? { voltageLabel: (free?.label ?? pattern?.label)! } : {}),
       ...(at !== undefined ? { breakerA: at } : {}),
       defaulted: [...(sysText ? [] : (['system'] as const)), ...(voltText ? [] : (['useVoltage'] as const))],
     });

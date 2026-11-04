@@ -19,6 +19,11 @@ export function parseVoltage(input: string): number | undefined {
   return Math.max(...parts.map(Number));
 }
 
+/** 電圧の文字を、全角→半角・空白とカンマを除去・末尾の V（ボルト）を除去して整える */
+export function normalizeVoltageText(input: string): string {
+  return toHalf(input).replace(/[,\s]/g, '').replace(/(V|ボルト)$/i, '');
+}
+
 /** 「105/210」のように2つ書かれた電圧は、その表記（半角・Vなし）を返す。それ以外は undefined */
 export function voltageLabel(input: string): string | undefined {
   const parts = toHalf(input).replace(/[,\s]/g, '').replace(/(V|ボルト)$/i, '').split('/');

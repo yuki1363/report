@@ -112,3 +112,21 @@ describe('API', () => {
     expect(contentDisposition('報告書.pdf')).toBe(`attachment; filename="___.pdf"; filename*=UTF-8''${encodeURIComponent('報告書.pdf')}`);
   });
 });
+
+describe('測定日', () => {
+  it('新しい報告書の測定日は空欄。複製・前回値の引き継ぎでも引き継がない（空欄）。空欄のまま保存・帳票にできる', async () => {
+    const created = (await (await req('/api/reports', { method: 'POST', body: '{}' })).json()) as Report;
+    expect(created.date).toBe('');
+    const withDate = { ...created, date: '2026-10-01', panel: { name: '日付の確認' } };
+    await req(`/api/reports/${created.id}`, { method: 'PUT', body: JSON.stringify(withDate) });
+    for (const mode of ['copy', 'inherit'] as const) {
+      const d = (await (await req('/api/reports', { method: 'POST', body: JSON.stringify({ from: created.id, mode }) })).json()) as Report;
+      expect(d.date).toBe('');
+    }
+    const blank = { ...withDate, date: '' };
+    expect((await req(`/api/reports/${created.id}`, { method: 'PUT', body: JSON.stringify(blank) })).status).toBe(200);
+    const html = await (await req(`/api/reports/${created.id}/html`)).text();
+    expect(html).toContain('測定日：');
+    expect(html).not.toContain('測定日：2');
+  });
+});
