@@ -442,15 +442,15 @@ function NumInput({
 
 /**
  * 使用電圧の入力欄。自由に書ける（候補: 105 / 105/210 / 210 / 440）。
- * 候補のどれかを書くと、電気方式も連動して決まる。それ以外（200V・100/200 など）は書いたとおりに帳票へ出す。
- * 空欄にすると、電気方式も空欄になる。確定は、欄から出たとき（Tab・クリック）か Enter。
+ * 書いた電圧は、書いたとおりに帳票へ出す（電気方式は変えない。候補と同じ数字でも同じ）。
+ * 候補の一覧から選んだときだけ、電気方式も連動して決まる。確定は、欄から出たとき（Tab・クリック）か Enter。
  */
 function VoltageInput({
   circuit,
   onCommit,
   className,
   ...rest
-}: { circuit: Circuit; onCommit: (text: string) => void; className?: string } & Record<string, unknown>) {
+}: { circuit: Circuit; onCommit: (text: string, picked: boolean) => void; className?: string } & Record<string, unknown>) {
   const shown = voltageText(circuit);
   const [text, setText] = useState(shown);
   const focused = useRef(false);
@@ -466,23 +466,23 @@ function VoltageInput({
       options={VOLTAGE_PATTERNS.map((p) => p.value)}
       value={text}
       onPick={(t) => {
-        // 候補を選んだら、その場で確定する（電気方式も連動）
+        // 候補を選んだら、その場で確定する（このときだけ電気方式も連動）
         setText(t);
-        onCommit(t);
+        onCommit(t, true);
       }}
-      title="自由に書けます（例: 105/210、200、100/200V）。候補の 105 / 105/210 / 210 / 440 を書くと、電気方式も連動します。空欄にすると電気方式も空欄になります"
+      title="自由に書けます（例: 105/210、200、100/200V）。書いただけでは電気方式は変わりません。右の ▾ の一覧から選ぶと、電気方式も連動して決まります"
       onFocus={(e) => {
         focused.current = true;
         e.target.select();
       }}
       onBlur={() => {
         focused.current = false;
-        if (text !== shown) onCommit(text);
+        if (text !== shown) onCommit(text, false);
         else setText(shown);
       }}
       onKeyDown={(e) => {
         // Enter で確定してから、表の移動（下の行へ）に渡す
-        if (e.key === 'Enter' && text !== shown) onCommit(text);
+        if (e.key === 'Enter' && text !== shown) onCommit(text, false);
       }}
       onChange={(t) => setText(t)}
     />
@@ -631,7 +631,7 @@ function CircuitGrid({
                   className={`volt ${isLowVoltage(c.useVoltage) ? '' : 'invalid'}`}
                   circuit={c}
                   {...cellProps(i, 'useVoltage')}
-                  onCommit={(text) => updateCircuit(c.id, (x) => applyFreeVoltage(x, text))}
+                  onCommit={(text, picked) => updateCircuit(c.id, (x) => applyFreeVoltage(x, text, picked))}
                 />
               </td>
               <td className="row-actions sticky-actions">

@@ -102,12 +102,23 @@ describe('電気方式の空欄', () => {
 
 import { applyFreeVoltage, voltageText } from './voltagePattern.ts';
 
-describe('電圧を自由に書く', () => {
+describe('電圧を自由に書く／候補から選ぶ', () => {
   const c = (system: '' | '1φ2W' | '1φ3W' | '3φ3W', useVoltage: number, voltageLabel?: string) => ({ system, useVoltage, ...(voltageLabel ? { voltageLabel } : {}), groundVoltage: 0 });
-  it('4パターンを書くと電気方式も連動、空欄なら電気方式も空欄', () => {
-    expect(applyFreeVoltage(c('', 0), '105/210')).toMatchObject({ system: '1φ3W', useVoltage: 210, voltageLabel: '105/210', groundVoltage: 105 });
-    expect(applyFreeVoltage(c('1φ3W', 210, '105/210'), '440V')).toMatchObject({ system: '3φ3W', useVoltage: 440 });
-    expect(applyFreeVoltage(c('3φ3W', 440), '')).toEqual({ system: '', useVoltage: 0, groundVoltage: 0 });
+  it('書いただけでは電気方式は変わらない（候補と同じ数字でも）。書いたとおり帳票に出る', () => {
+    const a = applyFreeVoltage(c('3φ3W', 210), '105/210'); // 候補と同じ書き方
+    expect(a).toMatchObject({ system: '3φ3W', useVoltage: 210, voltageLabel: '105/210', groundVoltage: 210 });
+    expect(applyFreeVoltage(c('1φ3W', 210, '105/210'), '440V')).toMatchObject({ system: '1φ3W', useVoltage: 440, groundVoltage: 220 });
+    expect(applyFreeVoltage(c('1φ2W', 105), '210')).toMatchObject({ system: '1φ2W', useVoltage: 210 });
+    expect(applyFreeVoltage(c('', 0), '440')).toMatchObject({ system: '', useVoltage: 440, groundVoltage: 0 }); // 方式が空欄なら対地電圧も 0
+  });
+  it('電圧の文字を消しても、電気方式はそのまま（電圧だけ空欄）', () => {
+    expect(applyFreeVoltage(c('3φ3W', 440), '')).toEqual({ system: '3φ3W', useVoltage: 0, groundVoltage: 0 });
+  });
+  it('候補の一覧から選んだときだけ、電気方式も連動して決まる', () => {
+    expect(applyFreeVoltage(c('', 0), '105/210', true)).toMatchObject({ system: '1φ3W', useVoltage: 210, voltageLabel: '105/210', groundVoltage: 105 });
+    expect(applyFreeVoltage(c('1φ3W', 210, '105/210'), '440', true)).toMatchObject({ system: '3φ3W', useVoltage: 440 });
+    // 候補にない値は、選んだことにしても電気方式は変えない
+    expect(applyFreeVoltage(c('1φ3W', 210, '105/210'), '200', true)).toMatchObject({ system: '1φ3W', useVoltage: 200 });
   });
   it('それ以外は書いたとおり。電気方式は変えず、数字として読めれば判定に使う（大きい方）', () => {
     const a = applyFreeVoltage(c('1φ3W', 210, '105/210'), '100/200V');

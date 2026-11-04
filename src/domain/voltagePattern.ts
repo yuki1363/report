@@ -100,21 +100,20 @@ export function applySystem<T extends VoltageFields>(c: T, system: WiringSystem 
 }
 
 /**
- * 電圧を自由に書いたとき（入力欄に直接書く）。
- * - 空欄 → 電気方式も空欄
- * - 4パターンのどれか → 電気方式も連動して決まる
- * - それ以外（200V・100/200 など）→ 書いたとおりに帳票へ出し、電気方式は変えない。
- *   数字として読めれば（「100/200」は大きい方）判定に使う。読めなければ使用電圧は 0（判定しない）
+ * 電圧を入力欄に書いたとき（または候補から選んだとき）。
+ * - 書いただけ（linkSystem=false）: **電気方式は変えない**。書いたとおりに帳票へ出す（候補と同じ数字でも）。
+ *   数字として読めれば（「100/200」は大きい方）判定に使う。読めなければ使用電圧は 0（判定しない）。空欄なら電圧だけが空欄
+ * - 候補から選んだ（linkSystem=true）: 4パターンなら電気方式も連動して決まる
  */
-export function applyFreeVoltage<T extends VoltageFields>(c: T, text: string): T {
+export function applyFreeVoltage<T extends VoltageFields>(c: T, text: string, linkSystem = false): T {
   const t = normalizeVoltageText(text);
-  if (t === '') return applyBlank(c);
   const pat = patternOfText(t);
-  if (pat) return applyVoltagePattern(c, pat);
-  const v = parseVoltage(t);
-  const use = v !== undefined && Number.isFinite(v) && v > 0 ? v : 0;
+  if (linkSystem && pat) return applyVoltagePattern(c, pat);
   const { voltageLabel: _l, ...rest } = c;
-  const label = use > 0 && String(use) === t ? undefined : t; // 数字だけの書き方なら、表記は持たない
+  if (t === '') return { ...rest, useVoltage: 0, groundVoltage: 0 } as T; // 電圧だけ空欄（電気方式はそのまま）
+  const v = pat ? pat.useVoltage : parseVoltage(t);
+  const use = v !== undefined && Number.isFinite(v) && v > 0 ? v : 0;
+  const label = pat ? pat.label : use > 0 && String(use) === t ? undefined : t; // 数字だけなら表記は持たない
   return {
     ...rest,
     ...(label ? { voltageLabel: label } : {}),

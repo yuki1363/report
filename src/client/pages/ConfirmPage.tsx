@@ -358,12 +358,11 @@ export function ConfirmPage({ id, auto }: { id: string; auto: boolean }) {
                         options={VOLTAGE_PATTERNS.map((p) => p.value)}
                         value={r.useVoltage}
                         disabled={confirmed}
-                        title="自由に書けます。候補の 105 / 105/210 / 210 / 440 を書くと、電気方式も連動します。空欄にすると電気方式も空欄になります"
-                        onChange={(t) => {
-                          // 4パターンなら電気方式も連動して決まる。空欄なら電気方式も空欄。それ以外は書いたとおり（電気方式は変えない）
-                          const sys = SYSTEM_OF_PATTERN[patternOfText(t)?.value ?? ''];
-                          setRow(r.rid, { useVoltage: t, ...(sys ? { system: sys } : t.trim() === '' ? { system: '' as const } : {}) }, 'useVoltage');
-                        }}
+                        title="自由に書けます。書いただけでは電気方式は変わりません。右の ▾ の一覧から選ぶと、電気方式も連動して決まります"
+                        // 書いただけ: 電圧だけ変える（電気方式は変えない）
+                        onChange={(t) => setRow(r.rid, { useVoltage: t }, 'useVoltage')}
+                        // 候補から選んだ: 電気方式も連動して決まる
+                        onPick={(t) => setRow(r.rid, { useVoltage: t, ...(SYSTEM_OF_PATTERN[t] ? { system: SYSTEM_OF_PATTERN[t] } : {}) }, 'useVoltage')}
                       />
                     </td>
                     <td className="row-actions">
