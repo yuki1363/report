@@ -24,6 +24,19 @@ export function claudeModel(): string {
 
 export class ExtractionError extends Error {}
 
+/**
+ * 利用者が追加できる指示（data/extract-notes.txt）。アプリを作り直さずに、読み取りの癖を直すために使う。
+ * 例: 「電圧が 210 と書かれていたら 200V の意味です」「AT 欄が空欄の行は breakerA を null にする」
+ */
+export function systemPromptWithNotes(dataDir: string): string {
+  try {
+    const notes = readFileSync(join(dataDir, 'extract-notes.txt'), 'utf8').trim().slice(0, 4000);
+    return notes ? `${SYSTEM_PROMPT}\n\n# 利用者からの追加の指示（上の指示と矛盾する場合は、こちらを優先してください）\n${notes}` : SYSTEM_PROMPT;
+  } catch {
+    return SYSTEM_PROMPT;
+  }
+}
+
 const nullable = (schema: Record<string, unknown>) => ({ anyOf: [schema, { type: 'null' }] });
 
 /** output_config.format に渡す JSON スキーマ（ExtractionSchema と同じ形） */
@@ -89,6 +102,7 @@ panels: 盤ごとに1要素。1つの資料に盤が複数並んでいる場合�
 - 電気方式と電圧（例: 「3φ3W 210V」「3φ3W 440V」）が、表の端に1回だけ書かれて複数の回路に共通している場合は、その範囲のすべての回路に system と useVoltage を入れてください。表の途中で区画が変わり別の方式・電圧が書かれている場合は、区画ごとに適用します。
 - 使用電圧は数値 [V] にします。「100/200V」のように2つ書かれている場合は大きい方です。
 - 電気方式は 1φ2W / 1φ3W / 3φ3W / 3φ4W のどれかに直してください（例: 1Φ3W、単相3線、1P3W → 1φ3W、三相3線 → 3φ3W）。判断できなければ null です。
+- 表の下段などに別の区画（MCB など、見出しが「MCB No.」「MCB AF/AT」になっているブロック）がある場合も、その行を回路として含めます。区画に別の電気方式・電圧が書かれていればそれを、書かれていなければ null にして uncertain に記録してください。
 - 「予備」「スペース」の行も1回路として含めます（名称は資料の表記のまま）。回路は資料に現れる順に並べ、重複して書かないでください。
 - テキスト層が付いているページは、画像とテキスト層の両方を見てください。文字はテキスト層の方が正確ですが、表の行・列の対応は画像で確かめてください。
 
@@ -134,9 +148,10 @@ export async function extractWithClaude(
   }
   const client = deps.client ?? new Anthropic();
   const model = deps.model ?? claudeModel();
+  const systemPrompt = systemPromptWithNotes(dataDir);
   const parts: Extraction[] = [];
   for (let i = 0; i < pages.length; i += PAGES_PER_REQUEST) {
-    parts.push(await extractBatch(client, model, pageContent(dataDir, importId, pages.slice(i, i + PAGES_PER_REQUEST))));
+    parts.push(await extractBatch(client, model, systemPrompt, pageContent(dataDir, importId, pages.slice(i, i + PAGES_PER_REQUEST))));
   }
   return { result: mergeExtractions(parts), model };
 }
@@ -144,6 +159,7 @@ export async function extractWithClaude(
 async function extractBatch(
   client: Anthropic,
   model: string,
+  systemPrompt: string,
   content: Anthropic.Beta.BetaContentBlockParam[],
 ): Promise<Extraction> {
   const useFallback = FALLBACK_DEFAULT_MODELS.includes(model);
@@ -153,7 +169,7 @@ async function extractBatch(
       .stream({
         model,
         max_tokens: 32000,
-        system: SYSTEM_PROMPT,
+        system: systemPrompt,
         messages: [{ role: 'user', content }],
         output_config: { format: { type: 'json_schema', schema: EXTRACTION_JSON_SCHEMA } },
         ...(useFallback ? { betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' as const } : {}),
