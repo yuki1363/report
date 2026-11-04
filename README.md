@@ -1,6 +1,23 @@
 # 配電盤 絶縁抵抗測定報告書アプリ
 
-仕様は [CLAUDE.md](./CLAUDE.md) を参照。現在 **P1（骨組み・手入力・判定・保存・PDF 出力）** まで実装済み。
+仕様は [CLAUDE.md](./CLAUDE.md) を参照。**P1〜P4** を実装済み。
+
+## 機能
+| 画面 | できること |
+|---|---|
+| 報告書一覧 | 新規作成、図面から作成、複製、前回値を引き継いで新規、削除 |
+| 取込 → 確認・修正 | PDF・画像をドラッグ&ドロップ（複数可）→ 読み取り → 左に元資料・右に結果（要確認は黄色）→ 確定で報告書へ反映（新規／追加／置き換え） |
+| 測定値入力 | キーボードだけで入力、判定をリアルタイム表示、前回値との比較（半分未満で赤）、メガー写真からの入力（実験的） |
+| 書式編集 ⇄ プレビュー | セルの文字・書式・罫線・結合、列幅/行高のドラッグ、行/列の挿入・削除、差し込み項目、回路行・見出し行の指定、元に戻す/やり直し、コピー/貼り付け。「この報告書だけに適用」と「テンプレートとして保存」を区別 |
+| 出力 | PDF（Edge）・Excel（ExcelJS）。同じ帳票モデルから出力 |
+| 書式テンプレート | 一覧、複製して編集、名前変更、削除 |
+| 設定 | 外部 AI 読み取り ON/OFF、モデル名、判定基準、列幅換算係数、計器マスタ、バックアップ |
+
+## 読み取りの仕組み
+- **外部 AI 読み取り ON**（設定画面。既定は OFF）: Claude API（`.env` の `ANTHROPIC_API_KEY`・`CLAUDE_MODEL`）。テキスト PDF は文字と座標＋ページ画像、スキャン PDF・写真は画像で送る。出力は JSON スキーマで固定（構造化出力）。
+- **OFF**: テキスト PDF はテキスト層から、スキャン PDF・写真は Tesseract（日本語、オフライン）で読み取る。精度は低いので補助扱い。
+- どちらの場合も、確認・修正画面で利用者が確定するまで報告書には反映しない。
+- PDF の画像化・テキスト抽出はブラウザ側（pdf.js）で行う（サーバーに画像処理用のネイティブ部品を入れないため）。
 
 ## セットアップ（Windows）
 1. Node.js 20 以上をインストールする。
@@ -19,7 +36,7 @@ PDF 出力には PC にインストール済みの **Microsoft Edge** を使う�
 npm install
 npm run package:win
 ```
-→ `release/insulation-report-win-x64.zip`（約 40MB）ができる。
+→ `release/insulation-report-win-x64.zip`（約 70MB）ができる。
 Node.js 本体（v24 LTS）は nodejs.org から取得し、SHA256 を検証して `node.exe` だけを同梱する。
 社内プロキシ経由で取得に失敗する場合は、`NODE_USE_ENV_PROXY=1` と `HTTPS_PROXY` を設定して再実行する。
 
@@ -39,8 +56,10 @@ npm run gen:template  # templates/default.json を再生成
 | パス | 内容 |
 |---|---|
 | `src/shared/schema.ts` | Sheet / Report などの型と zod スキーマ |
-| `src/domain/` | 判定・対地電圧算出・テンプレート展開・HTML 描画（純粋関数） |
-| `src/server/` | Hono サーバー、SQLite 保存、Edge による PDF 出力 |
+| `src/shared/extraction.ts` | 読み取り結果・取込の型と zod スキーマ |
+| `src/domain/` | 判定・対地電圧・テンプレート展開・HTML 描画・書式操作・前回値比較（純粋関数） |
+| `src/server/` | Hono サーバー、SQLite 保存、PDF（Edge）・Excel（ExcelJS）出力 |
+| `src/server/extract/` | 読み取り（Claude API / Tesseract） |
 | `src/client/` | React 画面 |
 | `templates/default.json` | 既定テンプレート（A4 横） |
 | `data/` | SQLite・画像（Git 管理外） |

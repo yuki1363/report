@@ -16,7 +16,7 @@ const PORT = Number(process.env.PORT || 8787);
 const DATA_DIR = resolve(ROOT, process.env.DATA_DIR || './data');
 
 const store = new Store(join(DATA_DIR, 'app.db'));
-const app = createApp({ store });
+const app = createApp({ store, dataDir: DATA_DIR });
 
 if (existsSync(CLIENT_DIR)) {
   // serveStatic の root はカレントディレクトリ基準の相対パス

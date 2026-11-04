@@ -11,7 +11,3 @@ export function builtinTemplates(): Template[] {
   cache ??= [TemplateSchema.parse(JSON.parse(readFileSync(TEMPLATE_DIR + 'default.json', 'utf8')))];
   return cache;
 }
-
-export function getTemplate(id: string): Template | undefined {
-  return builtinTemplates().find((t) => t.id === id);
-}

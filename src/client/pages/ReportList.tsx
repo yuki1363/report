@@ -40,6 +40,9 @@ export function ReportList() {
         <button className="primary" onClick={() => create()}>
           ＋ 新規作成
         </button>
+        <a className="button primary" href="#/import">
+          📄 図面から作成
+        </a>
       </div>
       {error && <p className="error">{error}</p>}
       {items === null ? (

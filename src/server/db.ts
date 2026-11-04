@@ -2,8 +2,11 @@
 import Database from 'better-sqlite3';
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { ImportRecordSchema, type ImportRecord } from '../shared/extraction.ts';
 import {
   DEFAULT_SETTINGS,
+  TemplateSchema,
+  type Template,
   ReportSchema,
   SettingsSchema,
   type Report,
@@ -28,6 +31,17 @@ export class Store {
       CREATE TABLE IF NOT EXISTS settings (
         key TEXT PRIMARY KEY,
         value TEXT NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS imports (
+        id TEXT PRIMARY KEY,
+        data TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS templates (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        data TEXT NOT NULL,
+        updated_at TEXT NOT NULL
       );
     `);
   }
@@ -76,6 +90,58 @@ export class Store {
     return this.db.prepare('DELETE FROM reports WHERE id = ?').run(id).changes > 0;
   }
 
+  /** 全報告書（前回値の比較用） */
+  allReports(): Report[] {
+    const rows = this.db.prepare('SELECT data FROM reports').all() as { data: string }[];
+    return rows.flatMap((row) => {
+      const p = ReportSchema.safeParse(JSON.parse(row.data));
+      return p.success ? [p.data] : [];
+    });
+  }
+
+  // --- 取込 ---
+  getImport(id: string): ImportRecord | undefined {
+    const row = this.db.prepare('SELECT data FROM imports WHERE id = ?').get(id) as { data: string } | undefined;
+    return row ? ImportRecordSchema.parse(JSON.parse(row.data)) : undefined;
+  }
+
+  saveImport(rec: ImportRecord): ImportRecord {
+    const r = ImportRecordSchema.parse(rec);
+    this.db
+      .prepare('INSERT INTO imports (id, data, created_at) VALUES (?, ?, ?) ON CONFLICT(id) DO UPDATE SET data = excluded.data')
+      .run(r.id, JSON.stringify(r), r.createdAt);
+    return r;
+  }
+
+  // --- テンプレート（利用者が保存したもの） ---
+  listUserTemplates(): Template[] {
+    const rows = this.db.prepare('SELECT data FROM templates ORDER BY updated_at DESC').all() as { data: string }[];
+    return rows.flatMap((row) => {
+      const p = TemplateSchema.safeParse(JSON.parse(row.data));
+      return p.success ? [p.data] : [];
+    });
+  }
+
+  getUserTemplate(id: string): Template | undefined {
+    const row = this.db.prepare('SELECT data FROM templates WHERE id = ?').get(id) as { data: string } | undefined;
+    return row ? TemplateSchema.parse(JSON.parse(row.data)) : undefined;
+  }
+
+  saveUserTemplate(t: Template): Template {
+    const v = TemplateSchema.parse(t);
+    this.db
+      .prepare(
+        `INSERT INTO templates (id, name, data, updated_at) VALUES (?, ?, ?, ?)
+         ON CONFLICT(id) DO UPDATE SET name = excluded.name, data = excluded.data, updated_at = excluded.updated_at`,
+      )
+      .run(v.id, v.name, JSON.stringify(v), new Date().toISOString());
+    return v;
+  }
+
+  deleteUserTemplate(id: string): boolean {
+    return this.db.prepare('DELETE FROM templates WHERE id = ?').run(id).changes > 0;
+  }
+
   getSettings(): Settings {
     const row = this.db.prepare("SELECT value FROM settings WHERE key = 'app'").get() as { value: string } | undefined;
     if (!row) return structuredClone(DEFAULT_SETTINGS);
@@ -88,6 +154,11 @@ export class Store {
       .prepare("INSERT INTO settings (key, value) VALUES ('app', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value")
       .run(JSON.stringify(s));
     return s;
+  }
+
+  /** 稼働中でも安全に DB をファイルへ複製する */
+  async backupTo(file: string): Promise<void> {
+    await this.db.backup(file);
   }
 
   close(): void {

@@ -223,7 +223,10 @@ export type Instrument = z.infer<typeof InstrumentSchema>;
 
 export const SettingsSchema = z.object({
   aiExtraction: z.boolean(),
-  /** 列幅換算係数（mm → Excel 文字数単位）。P3 で実機校正する。現在値は仮。 */
+  /**
+   * 列幅換算係数 [mm / 文字]（Excel 列幅 = (mm − 1.32) ÷ 係数）。
+   * 既定 1.85 は Excel の標準フォント Calibri 11pt（数字幅 7px、96dpi）からの理論値。実機で校正する（不確か）。
+   */
   colWidthMmPerChar: z.number().positive(),
   instruments: z.array(InstrumentSchema),
 });
@@ -232,6 +235,6 @@ export type Settings = z.infer<typeof SettingsSchema>;
 export const DEFAULT_SETTINGS: Settings = {
   // 社内ルール確認前のため既定は OFF（CLAUDE.md §4 情報管理）
   aiExtraction: false,
-  colWidthMmPerChar: 1.9,
+  colWidthMmPerChar: 1.85,
   instruments: [],
 };

@@ -6,3 +6,4 @@ samples/
 *.log
 release/
 .cache/
+src/client/public/pdfjs/

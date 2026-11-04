@@ -48,7 +48,8 @@ log('画面をビルド');
 run('npx', ['vite', 'build']);
 cpSync(join(root, 'dist/client'), join(out, 'dist/client'), { recursive: true });
 
-// 3. サーバーを1ファイルにまとめる（ネイティブ部品と Playwright は外出し）
+// 3. サーバーを1ファイルにまとめる（ネイティブ部品・ワーカーを使う部品は外出し）
+const runtimeDeps = ['better-sqlite3', 'playwright-core', 'tesseract.js', '@tesseract.js-data/jpn', 'exceljs'];
 log('サーバーをバンドル');
 await build({
   entryPoints: [join(root, 'src/server/main.ts')],
@@ -57,7 +58,7 @@ await build({
   platform: 'node',
   format: 'esm',
   target: 'node22',
-  external: ['better-sqlite3', 'playwright-core'],
+  external: runtimeDeps,
   // CommonJS 依存（dotenv など）の require を ESM で動かすための shim
   banner: { js: "import { createRequire as __cr } from 'node:module'; const require = __cr(import.meta.url);" },
   legalComments: 'none',
@@ -70,7 +71,6 @@ cpSync(join(root, '.env.example'), join(out, '.env.example'));
 
 // 5. 実行時に必要な部品だけをインストール
 log('実行用の部品をインストール');
-const runtimeDeps = ['better-sqlite3', 'playwright-core'];
 const lock = JSON.parse(readFileSync(join(root, 'package-lock.json'), 'utf8'));
 const exact = (dep) => lock.packages[`node_modules/${dep}`].version;
 writeFileSync(
@@ -99,6 +99,10 @@ for (const f of ['linux-arm64', 'linux-x64', 'linuxmusl-x64', 'linuxmusl-arm64',
 }
 rmSync(join(bs3, 'deps'), { recursive: true, force: true });
 rmSync(join(bs3, 'src'), { recursive: true, force: true });
+// ExcelJS のブラウザ用ビルド（Node では使わない）
+rmSync(join(out, 'node_modules/exceljs/dist'), { recursive: true, force: true });
+// OCR 用の日本語データは軽量版（best_int, 2MB）だけ残す
+rmSync(join(out, 'node_modules/@tesseract.js-data/jpn/4.0.0'), { recursive: true, force: true });
 
 // 6. Node.js 本体（公式配布物。SHA256 を検証）
 const nodeDir = join(out, 'node');

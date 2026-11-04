@@ -1,18 +1,26 @@
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
 import type { Report } from '../shared/schema.ts';
 import { contentDisposition, createApp } from './app.ts';
 import { Store } from './db.ts';
 
 const store = new Store(':memory:');
+const dataDir = mkdtempSync(join(tmpdir(), 'report-test-'));
 let lastHtml = '';
 const app = createApp({
   store,
+  dataDir,
   pdf: async (html) => {
     lastHtml = html;
     return Buffer.from('%PDF-fake');
   },
 });
-afterAll(() => store.close());
+afterAll(() => {
+  store.close();
+  rmSync(dataDir, { recursive: true, force: true });
+});
 
 const H = { host: 'localhost:8787', 'content-type': 'application/json' };
 const req = (path: string, init: RequestInit = {}) =>

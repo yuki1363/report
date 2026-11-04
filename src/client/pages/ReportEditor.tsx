@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import type { CircuitComparison, PreviousComparison } from '../../domain/compare.ts';
 import { autoGroundVoltage, DEFAULT_USE_VOLTAGE } from '../../domain/groundVoltage.ts';
+import { defaultTestVoltage } from '../../domain/importing.ts';
 import { judgeCircuit, judgePanel, VERDICT_LABEL, type Verdict } from '../../domain/judgment.ts';
 import { formatReading, parseReading } from '../../domain/reading.ts';
 import {
@@ -11,9 +13,12 @@ import {
   type Instrument,
   type ReadingKey,
   type Report,
+  type Sheet,
   type WiringSystem,
 } from '../../shared/schema.ts';
-import { api } from '../api.ts';
+import { api, type TemplateSummary } from '../api.ts';
+import { MeggerDialog } from '../MeggerDialog.tsx';
+import { SheetEditor } from '../SheetEditor.tsx';
 
 type SaveState = 'saved' | 'dirty' | 'saving' | 'error';
 
@@ -30,7 +35,7 @@ export function newCircuit(prev?: Circuit): Circuit {
     system,
     useVoltage,
     groundVoltage: autoGroundVoltage(system, useVoltage),
-    testVoltage: prev?.testVoltage ?? (useVoltage > 300 ? 500 : 250),
+    testVoltage: prev?.testVoltage ?? defaultTestVoltage(useVoltage),
     readings: {},
     source: 'manual',
   };
@@ -47,10 +52,17 @@ export function ReportEditor({ id }: { id: string }) {
   const [report, setReport] = useState<Report | null>(null);
   const [error, setError] = useState('');
   const [saveState, setSaveState] = useState<SaveState>('saved');
-  const [tab, setTab] = useState<'input' | 'preview'>('input');
+  const [tab, setTab] = useState<'input' | 'format' | 'preview'>('input');
   const [previewKey, setPreviewKey] = useState(0);
   const [instruments, setInstruments] = useState<Instrument[]>([]);
-  const [pdfBusy, setPdfBusy] = useState(false);
+  const [templates, setTemplates] = useState<TemplateSummary[]>([]);
+  const [aiEnabled, setAiEnabled] = useState(false);
+  const [outBusy, setOutBusy] = useState('');
+  const [formatSheet, setFormatSheet] = useState<{ sheet: Sheet; key: number } | null>(null);
+  const [formatDirty, setFormatDirty] = useState(false);
+  const [comparison, setComparison] = useState<PreviousComparison | null>(null);
+  const [megger, setMegger] = useState<{ row: number; key: ReadingKey } | null>(null);
+  const lastCell = useRef<{ row: number; key: ReadingKey }>({ row: 0, key: 'RE' });
   const saveTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const latest = useRef<Report | null>(null);
   /** 保存は直列に実行する（古い保存が新しい保存を上書きしないように） */
@@ -66,9 +78,19 @@ export function ReportEditor({ id }: { id: string }) {
       .catch((e: Error) => setError(e.message));
     api
       .getSettings()
-      .then((s) => setInstruments(s.settings.instruments))
+      .then((s) => {
+        setInstruments(s.settings.instruments);
+        setAiEnabled(s.settings.aiExtraction);
+      })
       .catch(() => {});
+    api.listTemplates().then(setTemplates).catch(() => {});
   }, [id]);
+
+  // 前回値との比較（保存のたびに取り直す）
+  useEffect(() => {
+    if (saveState !== 'saved') return;
+    api.previous(id).then(setComparison).catch(() => {});
+  }, [id, saveState]);
 
   const flush = useCallback((): Promise<void> => {
     clearTimeout(saveTimer.current);
@@ -144,23 +166,40 @@ export function ReportEditor({ id }: { id: string }) {
 
   const panelVerdict = judgePanel(report.circuits);
 
+  const leaveFormat = () => !(tab === 'format' && formatDirty) || confirm('書式の変更が保存されていません。破棄して移動しますか？');
+
   const openPreview = async () => {
+    if (!leaveFormat()) return;
     await flush();
     setPreviewKey((k) => k + 1);
     setTab('preview');
   };
 
-  const downloadPdf = async () => {
-    setPdfBusy(true);
+  const loadFormatSheet = async (r: Report): Promise<Sheet> =>
+    r.sheetOverride ?? (await api.getTemplate(r.templateId).catch(() => api.getTemplate('default'))).sheet;
+
+  const openFormat = async () => {
+    await flush();
+    const sheet = await loadFormatSheet(latest.current ?? report);
+    setFormatSheet((f) => ({ sheet, key: (f?.key ?? 0) + 1 }));
+    setFormatDirty(false);
+    setTab('format');
+  };
+
+  const output = async (kind: 'pdf' | 'xlsx') => {
+    setOutBusy(kind);
     try {
       await flush();
-      await api.downloadPdf(report.id);
+      await (kind === 'pdf' ? api.downloadPdf(report.id) : api.downloadXlsx(report.id));
     } catch (e) {
       alert((e as Error).message);
     } finally {
-      setPdfBusy(false);
+      setOutBusy('');
     }
   };
+
+  const templateName = templates.find((t) => t.id === report.templateId)?.name ?? report.templateId;
+  const cmpMap = new Map((comparison?.circuits ?? []).map((c) => [c.circuitId, c]));
 
   return (
     <section>
@@ -173,35 +212,131 @@ export function ReportEditor({ id }: { id: string }) {
         <span className={`verdict big v-${panelVerdict}`}>総合判定: {VERDICT_LABEL[panelVerdict]}</span>
         <div className="spacer" />
         <div className="tabs">
-          <button className={tab === 'input' ? 'active' : ''} onClick={() => setTab('input')}>
+          <button className={tab === 'input' ? 'active' : ''} onClick={() => leaveFormat() && setTab('input')}>
             測定値入力
+          </button>
+          <button className={tab === 'format' ? 'active' : ''} onClick={() => tab !== 'format' && openFormat()}>
+            書式編集
           </button>
           <button className={tab === 'preview' ? 'active' : ''} onClick={openPreview}>
             プレビュー
           </button>
         </div>
-        <button className="primary" onClick={downloadPdf} disabled={pdfBusy}>
-          {pdfBusy ? 'PDF 作成中…' : 'PDF 出力'}
+        <button className="primary" onClick={() => output('pdf')} disabled={Boolean(outBusy)}>
+          {outBusy === 'pdf' ? 'PDF 作成中…' : 'PDF 出力'}
+        </button>
+        <button className="primary" onClick={() => output('xlsx')} disabled={Boolean(outBusy)}>
+          {outBusy === 'xlsx' ? 'Excel 作成中…' : 'Excel 出力'}
         </button>
       </div>
       {error && <p className="error">{error}</p>}
 
       {tab === 'preview' ? (
         <div className="preview">
-          <p className="muted">PDF と同じ HTML を表示しています。（書式の編集は P3 で対応予定）</p>
+          <p className="muted">
+            PDF と同じ HTML を表示しています。書式: {report.sheetOverride ? 'この報告書だけの書式' : `テンプレート「${templateName}」`}
+          </p>
           <iframe key={previewKey} title="プレビュー" src={`/api/reports/${report.id}/html?v=${previewKey}`} />
         </div>
+      ) : tab === 'format' && formatSheet ? (
+        <SheetEditor
+          key={formatSheet.key}
+          initial={formatSheet.sheet}
+          previewReport={report}
+          onDirtyChange={setFormatDirty}
+          subtitle={report.sheetOverride ? '編集中: この報告書だけの書式' : `編集中: テンプレート「${templateName}」をもとにした書式`}
+          actions={[
+            {
+              label: 'この報告書だけに適用',
+              primary: true,
+              onClick: async (sheet) => {
+                update((r) => ({ ...r, sheetOverride: sheet }));
+                await flush();
+              },
+            },
+            {
+              label: 'テンプレートとして保存…',
+              onClick: async (sheet) => {
+                const name = prompt('テンプレートの名前（次回からの報告書作成で選べます）', `${report.panel.name || '新しい'}用の書式`);
+                if (!name?.trim()) throw new Error('保存を取り消しました');
+                const created = await api.createTemplate(name.trim(), sheet);
+                setTemplates(await api.listTemplates());
+                if (confirm(`テンプレート「${created.name}」を保存しました。\nこの報告書にも、このテンプレートを使いますか？`)) {
+                  update((r) => {
+                    const { sheetOverride: _s, ...rest } = r;
+                    return { ...rest, templateId: created.id };
+                  });
+                  await flush();
+                }
+              },
+            },
+            ...(report.sheetOverride
+              ? [
+                  {
+                    label: 'この報告書だけの書式を破棄',
+                    onClick: async () => {
+                      if (!confirm(`この報告書だけの書式を破棄して、テンプレート「${templateName}」に戻します。よろしいですか？`)) {
+                        throw new Error('取り消しました');
+                      }
+                      const next = (() => {
+                        const { sheetOverride: _s, ...rest } = latest.current ?? report;
+                        return rest;
+                      })();
+                      update(() => next);
+                      await flush();
+                      const sheet = await loadFormatSheet(next);
+                      setFormatSheet((f) => ({ sheet, key: (f?.key ?? 0) + 1 }));
+                    },
+                  },
+                ]
+              : []),
+          ]}
+        />
       ) : (
         <>
-          <HeaderForm report={report} instruments={instruments} update={update} />
+          <HeaderForm report={report} instruments={instruments} templates={templates} update={update} />
+          <div className="toolbar sub">
+            <a className="button" href={`#/import/${report.id}`} onClick={() => void flush()}>
+              📄 図面から回路を追加
+            </a>
+            <button
+              onClick={() => setMegger({ ...lastCell.current, row: Math.min(lastCell.current.row, Math.max(0, report.circuits.length - 1)) })}
+              disabled={report.circuits.length === 0}
+              title="メガーの表示を撮った写真から測定値を読み取ります（実験的機能）"
+            >
+              📷 メガー写真から入力（実験的）
+            </button>
+            {comparison?.previous ? (
+              <span className="muted">
+                前回値: <a href={`#/reports/${comparison.previous.id}`}>{comparison.previous.date} の報告書</a> と比較（最小値が前回の半分未満の回路を赤で表示）
+              </span>
+            ) : (
+              <span className="muted">前回値: 同じ盤名で過去の報告書がありません</span>
+            )}
+          </div>
           <CircuitGrid
             circuits={report.circuits}
             updateCircuit={updateCircuit}
             addCircuit={addCircuit}
             removeCircuit={removeCircuit}
             moveCircuit={moveCircuit}
+            comparison={cmpMap}
+            onCellFocus={(row, key) => (lastCell.current = { row, key })}
           />
         </>
+      )}
+      {megger && (
+        <MeggerDialog
+          circuits={report.circuits}
+          initialRow={megger.row}
+          initialKey={megger.key}
+          aiEnabled={aiEnabled}
+          onClose={() => setMegger(null)}
+          onApply={(cid, key, reading) => {
+            updateCircuit(cid, (x) => ({ ...x, readings: { ...x.readings, [key]: reading } }));
+            setMegger(null);
+          }}
+        />
       )}
     </section>
   );
@@ -212,15 +347,39 @@ export function ReportEditor({ id }: { id: string }) {
 function HeaderForm({
   report,
   instruments,
+  templates,
   update,
 }: {
   report: Report;
   instruments: Instrument[];
+  templates: TemplateSummary[];
   update: (fn: (r: Report) => Report) => void;
 }) {
   return (
     <fieldset className="header-form">
       <legend>基本情報</legend>
+      <label>
+        書式テンプレート
+        <select
+          value={report.templateId}
+          onChange={(e) => {
+            const v = e.target.value;
+            if (report.sheetOverride && !confirm('この報告書だけの書式は破棄され、選んだテンプレートの書式になります。よろしいですか？')) return;
+            update((r) => {
+              const { sheetOverride: _s, ...rest } = r;
+              return { ...rest, templateId: v };
+            });
+          }}
+        >
+          {templates.length === 0 && <option value={report.templateId}>{report.templateId}</option>}
+          {templates.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.name}
+            </option>
+          ))}
+        </select>
+        {report.sheetOverride && <small>※この報告書だけの書式を使用中</small>}
+      </label>
       <label>
         盤名
         <input value={report.panel.name} onChange={(e) => update((r) => ({ ...r, panel: { ...r.panel, name: e.target.value } }))} />
@@ -387,12 +546,16 @@ function CircuitGrid({
   addCircuit,
   removeCircuit,
   moveCircuit,
+  comparison,
+  onCellFocus,
 }: {
   circuits: Circuit[];
   updateCircuit: (id: string, fn: (c: Circuit) => Circuit) => void;
   addCircuit: (afterIndex?: number) => void;
   removeCircuit: (id: string) => void;
   moveCircuit: (index: number, delta: number) => void;
+  comparison: Map<string, CircuitComparison>;
+  onCellFocus: (row: number, key: ReadingKey) => void;
 }) {
   const gridRef = useRef<HTMLTableElement>(null);
   const pendingFocus = useRef<{ row: number; col: number } | null>(null);
@@ -446,7 +609,16 @@ function CircuitGrid({
 
   return (
     <div className="grid-wrap">
-      <table className="grid" ref={gridRef}>
+      <table
+        className="grid"
+        ref={gridRef}
+        onFocusCapture={(e) => {
+          const t = e.target as HTMLElement;
+          const row = Number(t.dataset.row);
+          const col = COLS[Number(t.dataset.col)];
+          if (!Number.isNaN(row) && col && (READING_KEYS as readonly string[]).includes(col)) onCellFocus(row, col as ReadingKey);
+        }}
+      >
         <thead>
           <tr>
             <th rowSpan={2}>No</th>
@@ -459,6 +631,7 @@ function CircuitGrid({
             <th rowSpan={2}>最小値</th>
             <th rowSpan={2}>基準値</th>
             <th rowSpan={2}>判定</th>
+            <th rowSpan={2} title="同じ盤名の前回の報告書の最小値">前回最小</th>
             <th rowSpan={2}>備考</th>
             <th rowSpan={2}></th>
           </tr>
@@ -549,6 +722,7 @@ function CircuitGrid({
                 <td>
                   <VerdictBadge v={j.verdict} />
                 </td>
+                <PrevCell cmp={comparison.get(c.id)} />
                 <td>
                   <input className="note" value={c.note ?? ''} {...cellProps(i, 'note')} onChange={(e) => updateCircuit(c.id, (x) => ({ ...x, note: e.target.value }))} />
                 </td>
@@ -584,6 +758,17 @@ function CircuitGrid({
         </span>
       </div>
     </div>
+  );
+}
+
+function PrevCell({ cmp }: { cmp: CircuitComparison | undefined }) {
+  if (!cmp?.prevMin) return <td className="num muted">-</td>;
+  const pct = cmp.ratio !== undefined ? Math.round(cmp.ratio * 100) : undefined;
+  return (
+    <td className={`num ${cmp.dropped ? 'dropped' : ''}`} title={pct !== undefined ? `前回比 ${pct}%` : undefined}>
+      {formatReading(cmp.prevMin)}
+      {cmp.dropped && <span className="drop-tag"> ↓{pct}%</span>}
+    </td>
   );
 }
 

@@ -17,13 +17,18 @@
     "package:win": "node scripts/package-win.mjs"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^1.4.0",
     "@hono/node-server": "^2.1.6",
+    "@tesseract.js-data/jpn": "^1.0.0",
     "better-sqlite3": "^13.0.3",
     "dotenv": "^18.0.9",
+    "exceljs": "^4.4.0",
     "hono": "^4.13.16",
+    "pdfjs-dist": "^6.5.438",
     "playwright-core": "^1.64.1",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
+    "tesseract.js": "^7.0.0",
     "tsx": "^4.23.15",
     "zod": "^4.6.7"
   },

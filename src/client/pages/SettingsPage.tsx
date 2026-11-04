@@ -46,7 +46,7 @@ export function SettingsPage() {
       </div>
 
       <fieldset>
-        <legend>外部 AI 読み取り（P2 で使用）</legend>
+        <legend>外部 AI 読み取り</legend>
         <label className="check">
           <input
             type="checkbox"
@@ -57,7 +57,7 @@ export function SettingsPage() {
         </label>
         <p className="warn">
           ON にすると、取り込んだ図面・写真が Anthropic API に送信されます。社内の情報持ち出しルールで外部 API の利用が許可されているか確認してから ON にしてください。
-          OFF の場合はオフライン読み取り（Tesseract、P4）のみ使用します。
+          OFF の場合はオフライン読み取り（OCR）のみ使用します（図面の読み取り精度は低い）。メガー写真の読み取りは ON のときだけ使えます。
         </p>
         <p>
           モデル名: <code>{data.model}</code>（.env の CLAUDE_MODEL で変更）／ API キー: {data.apiKeyConfigured ? '設定済み' : '未設定'}
@@ -140,9 +140,9 @@ export function SettingsPage() {
       </fieldset>
 
       <fieldset>
-        <legend>Excel 出力（P3 で使用）</legend>
+        <legend>Excel 出力</legend>
         <label>
-          列幅換算係数 [mm / 文字]（仮の値。P3 で Excel 実機と比べて校正します）
+          列幅換算係数 [mm / 文字]（Excel の列幅 = (列幅mm − 1.32) ÷ 係数。既定 1.85 は理論値のため、下の手順で実機に合わせてください）
           <input
             type="number"
             step="0.01"
@@ -151,6 +151,15 @@ export function SettingsPage() {
             onChange={(e) => setSettings({ ...settings, colWidthMmPerChar: Number(e.target.value) || settings.colWidthMmPerChar })}
           />
         </label>
+        <details>
+          <summary>校正の手順</summary>
+          <ol>
+            <li>どれかの報告書を「Excel 出力」し、Excel で開いて「ページレイアウト」表示にします。</li>
+            <li>ルーラーで、A列〜最終列の合計幅を測ります（既定テンプレートは 277mm になるはずです）。</li>
+            <li>新しい係数 = 今の係数 × 測った幅 ÷ 277 を入力して保存し、もう一度出力して確かめます。</li>
+          </ol>
+          <p className="muted">PC の表示倍率（DPI）や Excel の標準フォントの設定によって変わるため、使う PC で一度合わせてください。</p>
+        </details>
       </fieldset>
 
       <fieldset>
