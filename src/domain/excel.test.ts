@@ -45,3 +45,32 @@ describe('Excel 出力', () => {
     expect(ws.getCell('P13').value).toBe('良'); // 5回路目: 1φ3W 対地100V・0.15MΩ → 基準0.1 → 良
   });
 });
+
+import { safeSheetName, sheetsToXlsx, uniqueSheetNames } from './excel.ts';
+
+describe('Excel の複数シート（一括出力）', () => {
+  it('シート名: 使えない文字は _、31文字まで、空は既定名', () => {
+    expect(safeSheetName('低圧/動力盤:No.1?[a]*')).toBe('低圧_動力盤_No.1__a__');
+    expect(safeSheetName('あ'.repeat(40))).toHaveLength(31);
+    expect(safeSheetName('   ', '報告書3')).toBe('報告書3');
+  });
+  it('同じ盤名でもシート名が重ならない（大文字小文字も区別しない）', () => {
+    expect(uniqueSheetNames(['盤A', '盤A', 'abc', 'ABC', '', '盤A'])).toEqual(['盤A', '盤A (2)', 'abc', 'ABC (2)', '報告書5', '盤A (3)']);
+    const long = 'あ'.repeat(31);
+    const names = uniqueSheetNames([long, long]);
+    expect(names[1]).toHaveLength(31);
+    expect(new Set(names).size).toBe(2);
+  });
+  it('報告書ごとに1シート。順番・書式（用紙の向きなど）はシートごと', async () => {
+    const a = generateSheet(template.sheet, sampleReport(3));
+    const b = generateSheet({ ...template.sheet, page: { ...template.sheet.page, orientation: 'landscape' } }, sampleReport(1));
+    const buf = await sheetsToXlsx([{ sheet: a, title: '盤1' }, { sheet: b, title: '盤1' }], { colWidthMmPerChar: 1.85 });
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(buf as unknown as ArrayBuffer);
+    expect(wb.worksheets.map((w) => w.name)).toEqual(['盤1', '盤1 (2)']);
+    expect(wb.worksheets[0]!.pageSetup.orientation).toBe('portrait');
+    expect(wb.worksheets[1]!.pageSetup.orientation).toBe('landscape');
+    expect(wb.worksheets[0]!.getCell('A1').value).toBe('絶縁抵抗測定報告書');
+    expect(wb.worksheets[0]!.getCell('B11').value).toBeTruthy(); // 回路が3行ぶん入っている
+  });
+});

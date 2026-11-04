@@ -226,6 +226,18 @@ describe('一括印刷・選択印刷（PDF をまとめる）', () => {
     expect(await pages(all)).toBe(1 + 3 + 2);
     expect(await pages(await post(['print-P-3', 'print-P-1']))).toBe(2 + 1); // 選択印刷（一部）
     expect(await pages(await post(['print-P-2']))).toBe(3); // 1件だけ
+    // Excel: 報告書1件が1シート、順番どおり
+    const ExcelJS = (await import('exceljs')).default;
+    const xl = await printApp.request(base + '/api/print-xlsx', { method: 'POST', body: JSON.stringify({ ids: ['print-P-3', 'print-P-1'] }), headers: { ...H, 'content-type': 'application/json' } });
+    expect(xl.status).toBe(200);
+    expect(xl.headers.get('content-type')).toContain('spreadsheetml');
+    expect(xl.headers.get('content-disposition')).toContain('.xlsx');
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load((await xl.arrayBuffer()) as ArrayBuffer);
+    expect(wb.worksheets.map((w) => w.name)).toEqual(['P-3', 'P-1']);
+    expect(wb.worksheets[0]!.getCell('A3').value).toBe('盤名：P-3');
+    const xlMissing = await printApp.request(base + '/api/print-xlsx', { method: 'POST', body: JSON.stringify({ ids: ['no-such-id'] }), headers: { ...H, 'content-type': 'application/json' } });
+    expect(xlMissing.status).toBe(404);
     const missing = await post(['print-P-1', 'no-such-id']);
     expect(missing.status).toBe(404);
     expect(((await missing.json()) as { error: string }).error).toContain('見つかりません');

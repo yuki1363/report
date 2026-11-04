@@ -90,15 +90,15 @@ export const api = {
   getSettings: () => call<SettingsResponse>('/api/settings'),
   saveSettings: (s: Settings) => call<Settings>('/api/settings', { method: 'PUT', body: JSON.stringify(s) }),
 
-  /** 複数の報告書を1つの PDF にまとめる（一括印刷・選択印刷）。ids の順番どおりに並ぶ */
-  async printReports(ids: string[]): Promise<{ blob: Blob; name: string }> {
-    const res = await fetch('/api/print', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids }) });
+  /** 複数の報告書を1つの PDF（または Excel。報告書1件が1シート）にまとめる（一括・選択）。ids の順番どおりに並ぶ */
+  async printReports(ids: string[], format: 'pdf' | 'xlsx' = 'pdf'): Promise<{ blob: Blob; name: string }> {
+    const res = await fetch(format === 'xlsx' ? '/api/print-xlsx' : '/api/print', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids }) });
     if (!res.ok) {
       const body = (await res.json().catch(() => ({}))) as { error?: string };
-      throw new Error(body.error ?? `PDF の作成に失敗しました (${res.status})`);
+      throw new Error(body.error ?? `${format === 'xlsx' ? 'Excel' : 'PDF'} の作成に失敗しました (${res.status})`);
     }
     const m = /filename\*=UTF-8''([^;]+)/.exec(res.headers.get('content-disposition') ?? '');
-    return { blob: await res.blob(), name: m ? decodeURIComponent(m[1]!) : 'reports.pdf' };
+    return { blob: await res.blob(), name: m ? decodeURIComponent(m[1]!) : `reports.${format}` };
   },
   downloadPdf: (id: string) => download(`/api/reports/${id}/pdf`, 'report.pdf'),
   downloadXlsx: (id: string) => download(`/api/reports/${id}/xlsx`, 'report.xlsx'),

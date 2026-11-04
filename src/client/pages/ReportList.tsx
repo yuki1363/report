@@ -63,13 +63,13 @@ export function ReportList() {
       return next;
     });
 
-  /** open: PDF を新しいタブで開く（そこで Ctrl+P で印刷）／ save: PDF を保存する */
-  const print = (ids: string[], how: 'open' | 'save', label: string) =>
+  /** open: PDF を新しいタブで開く（そこで Ctrl+P で印刷）／ save: PDF または Excel を保存する */
+  const print = (ids: string[], how: 'open' | 'save', label: string, format: 'pdf' | 'xlsx' = 'pdf') =>
     run(async () => {
       if (ids.length === 0) return;
-      setBusy(`${label}（${ids.length}件）の PDF を作成しています…`);
+      setBusy(`${label}（${ids.length}件）の ${format === 'xlsx' ? 'Excel' : 'PDF'} を作成しています…`);
       try {
-        const { blob, name } = await api.printReports(ids);
+        const { blob, name } = await api.printReports(ids, format);
         const url = URL.createObjectURL(blob);
         if (how === 'open') {
           const w = window.open(url, '_blank');
@@ -127,6 +127,9 @@ export function ReportList() {
             <button disabled={Boolean(busy) || selectedIds.length === 0} onClick={() => print(selectedIds, 'save', '選択')} title="チェックを入れた報告書を、1つの PDF にまとめて保存します">
               選択を PDF 保存
             </button>
+            <button disabled={Boolean(busy) || selectedIds.length === 0} onClick={() => print(selectedIds, 'save', '選択', 'xlsx')} title="チェックを入れた報告書を、1つの Excel ファイルにまとめて保存します（報告書1件が1シート）">
+              選択を Excel 保存
+            </button>
             <span className="sep" />
             <button disabled={Boolean(busy)} onClick={() => print(allIds, 'open', '一括印刷')} title="一覧のすべての報告書を、1つの PDF にまとめて開きます（開いた画面で Ctrl+P で印刷）">
               🖨 一括印刷（全{allIds.length}件）
@@ -134,9 +137,12 @@ export function ReportList() {
             <button disabled={Boolean(busy)} onClick={() => print(allIds, 'save', '全')} title="一覧のすべての報告書を、1つの PDF にまとめて保存します">
               全部を PDF 保存
             </button>
+            <button disabled={Boolean(busy)} onClick={() => print(allIds, 'save', '全', 'xlsx')} title="一覧のすべての報告書を、1つの Excel ファイルにまとめて保存します（報告書1件が1シート）">
+              全部を Excel 保存
+            </button>
             {busy && <span className="busy">{busy}</span>}
           </div>
-          <p className="muted small">印刷は、PDF が新しいタブで開くので、そこで Ctrl+P（またはプリンターのボタン）を押してください。順番は、いま表示している並びです。</p>
+          <p className="muted small">印刷は、PDF が新しいタブで開くので、そこで Ctrl+P（またはプリンターのボタン）を押してください。Excel は、報告書1件が1シートの1ファイルになります。順番は、いま表示している並びです。</p>
           <table className="list">
             <thead>
               <tr>

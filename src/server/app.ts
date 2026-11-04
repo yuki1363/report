@@ -18,7 +18,7 @@ import {
   type Template,
 } from '../shared/schema.ts';
 import type { Store } from './db.ts';
-import { sheetToXlsx } from '../domain/excel.ts';
+import { sheetsToXlsx, sheetToXlsx } from '../domain/excel.ts';
 import { defaultExtractors, registerImportRoutes, type Extractors } from './importRoutes.ts';
 import { mergePdfs } from './mergePdf.ts';
 import { htmlToPdf, PdfBrowserError } from './pdf.ts';
@@ -199,6 +199,28 @@ export function createApp({ store, dataDir, paths, pdf = htmlToPdf, extractors =
     return c.body(new Uint8Array(merged), 200, {
       'Content-Type': 'application/pdf',
       'Content-Disposition': contentDisposition(`絶縁抵抗測定報告書_${reports.length}件_${day}.pdf`),
+    });
+  });
+
+  /**
+   * 一括・選択の Excel 出力: 指定した報告書（順番どおり）を、1つの Excel ファイルにまとめる（報告書1件につき1シート）。
+   * 用紙・余白・印刷範囲・見出し行は、シートごとの書式のまま。
+   */
+  app.post('/api/print-xlsx', async (c) => {
+    const { ids } = PrintBodySchema.parse(await c.req.json());
+    const reports: Report[] = [];
+    for (const id of ids) {
+      const r = store.getReport(id);
+      if (!r) return c.json({ error: `報告書が見つかりません（削除された可能性があります）: ${id}` }, 404);
+      reports.push(r);
+    }
+    const buf = await sheetsToXlsx(
+      reports.map((r) => ({ sheet: generateSheet(sheetFor(r), r, DEFAULT_CRITERIA), title: r.panel.name })),
+      { colWidthMmPerChar: settings().colWidthMmPerChar },
+    );
+    return c.body(new Uint8Array(buf), 200, {
+      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Disposition': contentDisposition(`絶縁抵抗測定報告書_${reports.length}件_${todayLocal()}.xlsx`),
     });
   });
 

@@ -47,10 +47,40 @@ export interface XlsxOptions {
   title?: string;
 }
 
-export async function sheetToXlsx(sheet: Sheet, opts: XlsxOptions): Promise<Uint8Array> {
+/** Excel のシート名にできる形にする（使えない文字は _、31文字まで）。空なら既定名 */
+export function safeSheetName(title: string, fallback = '報告書'): string {
+  return title.replace(/[\\/?*[\]:]/g, '_').replace(/^'+|'+$/g, '').trim().slice(0, 31) || fallback;
+}
+
+/** 同じ名前のシートができないように、2・3…を付けて重複を避ける（Excel のシート名は大文字小文字を区別しない） */
+export function uniqueSheetNames(titles: string[]): string[] {
+  const used = new Set<string>();
+  return titles.map((t, i) => {
+    const base = safeSheetName(t, `報告書${i + 1}`);
+    let name = base;
+    for (let n = 2; used.has(name.toLowerCase()); n++) {
+      const suffix = ` (${n})`;
+      name = base.slice(0, 31 - suffix.length) + suffix;
+    }
+    used.add(name.toLowerCase());
+    return name;
+  });
+}
+
+/** 1つの Excel ファイルに、複数のシート（報告書1件につき1シート）を入れる。一括出力用。 */
+export async function sheetsToXlsx(items: { sheet: Sheet; title: string }[], opts: Omit<XlsxOptions, 'title'>): Promise<Uint8Array> {
   const wb = new ExcelJS.Workbook();
   wb.creator = '絶縁抵抗測定報告書アプリ';
-  const name = (opts.title || '報告書').replace(/[\\/?*[\]:]/g, '_').slice(0, 31) || '報告書';
+  const names = uniqueSheetNames(items.map((i) => i.title));
+  items.forEach((item, i) => addSheetTo(wb, item.sheet, names[i]!, opts));
+  return new Uint8Array(await wb.xlsx.writeBuffer());
+}
+
+export async function sheetToXlsx(sheet: Sheet, opts: XlsxOptions): Promise<Uint8Array> {
+  return sheetsToXlsx([{ sheet, title: opts.title || '報告書' }], opts);
+}
+
+function addSheetTo(wb: ExcelJS.Workbook, sheet: Sheet, name: string, opts: Omit<XlsxOptions, 'title'>): void {
   const rows = sheet.rowHeightsMm.length;
   const cols = sheet.colWidthsMm.length;
   const m = sheet.page.marginsMm;
@@ -136,6 +166,5 @@ export async function sheetToXlsx(sheet: Sheet, opts: XlsxOptions): Promise<Uint
     }
   }
 
-  // Buffer を使わない（ブラウザでも動かすため）
-  return new Uint8Array(await wb.xlsx.writeBuffer());
+
 }
