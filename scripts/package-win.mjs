@@ -49,7 +49,8 @@ run('npx', ['vite', 'build']);
 cpSync(join(root, 'dist/client'), join(out, 'dist/client'), { recursive: true });
 
 // 3. サーバーを1ファイルにまとめる（ネイティブ部品・ワーカーを使う部品は外出し）
-const runtimeDeps = ['better-sqlite3', 'playwright-core', 'tesseract.js', '@tesseract.js-data/jpn', 'exceljs'];
+// exceljs は本体に組み込む（部品が数千ファイルあり、Windows での展開が極端に遅くなるため）
+const runtimeDeps = ['better-sqlite3', 'playwright-core', 'tesseract.js', '@tesseract.js-data/jpn'];
 log('サーバーをバンドル');
 await build({
   entryPoints: [join(root, 'src/server/main.ts')],
@@ -99,8 +100,6 @@ for (const f of ['linux-arm64', 'linux-x64', 'linuxmusl-x64', 'linuxmusl-arm64',
 }
 rmSync(join(bs3, 'deps'), { recursive: true, force: true });
 rmSync(join(bs3, 'src'), { recursive: true, force: true });
-// ExcelJS のブラウザ用ビルド（Node では使わない）
-rmSync(join(out, 'node_modules/exceljs/dist'), { recursive: true, force: true });
 // OCR 用の日本語データは軽量版（best_int, 2MB）だけ残す
 rmSync(join(out, 'node_modules/@tesseract.js-data/jpn/4.0.0'), { recursive: true, force: true });
 
