@@ -1,22 +1,22 @@
 /**
  * 既定テンプレート templates/default.json を生成する。
  *   npm run gen:template
- * A4 横、余白 10mm、印字幅 277mm。
+ * A4 縦、余白 上下10mm・左右8mm、印字幅 194mm。
  */
 import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { READING_KEYS, READING_LABELS, TemplateSchema, type Cell, type CellStyle, type Sheet } from '../src/shared/schema.ts';
 
 const cols = [
-  10, // 0 No
-  76, // 1 回路名称
-  16, // 2 電気方式
-  14, // 3 使用電圧
-  13, 13, 13, 13, 13, 13, 13, 13, // 4-11 測定値
-  16, // 12 最小値
-  14, // 13 基準値
-  12, // 14 判定
-  15, // 15 備考
+  8, // 0 No
+  40, // 1 回路名称
+  12, // 2 電気方式
+  10, // 3 使用電圧
+  9.5, 9.5, 9.5, 9.5, 9.5, 9.5, 9.5, 9.5, // 4-11 測定値
+  11, // 12 最小値
+  10, // 13 基準値
+  9, // 14 判定
+  18, // 15 備考
 ];
 const LAST = cols.length - 1;
 
@@ -63,11 +63,11 @@ rows.push(4);
 
 // 6-7: 表の見出し（2段）
 rows.push(6, 6);
-const H: CellStyle = { hAlign: 'center', bold: true, fill: '#EEEEEE', wrap: true, sizePt: 8 };
+const H: CellStyle = { hAlign: 'center', bold: true, fill: '#EEEEEE', wrap: true, sizePt: 7 };
 boxed(6, 0, 7, 0, 'No', H);
 boxed(6, 1, 7, 1, '回路名称', H);
-boxed(6, 2, 7, 2, '電気方式', H);
-boxed(6, 3, 7, 3, '使用電圧\n[V]', H);
+boxed(6, 2, 7, 2, '電気\n方式', H);
+boxed(6, 3, 7, 3, '使用\n電圧\n[V]', H);
 boxed(6, 4, 6, 11, '絶縁抵抗値 [MΩ]', H);
 READING_KEYS.forEach((k, i) => boxed(7, 4 + i, 7, 4 + i, READING_LABELS[k], H));
 boxed(6, 12, 7, 12, '最小値\n[MΩ]', H);
@@ -77,7 +77,7 @@ boxed(6, 15, 7, 15, '備考', H);
 
 // 8: 回路行（回路数ぶん繰り返す）
 rows.push(7);
-const C: CellStyle = { border: all, sizePt: 9 };
+const C: CellStyle = { border: all, sizePt: 8 };
 set(8, 0, '{{c.no}}', { ...C, hAlign: 'center' });
 set(8, 1, '{{c.name}}', { ...C, shrinkToFit: true });
 set(8, 2, '{{c.system}}', { ...C, hAlign: 'center' });
@@ -95,14 +95,14 @@ rows.push(8);
 boxed(10, 0, 10, 2, '総合判定', { hAlign: 'center', bold: true, fill: '#EEEEEE', sizePt: 10 });
 boxed(10, 3, 10, 5, '{{report.judgment}}', { hAlign: 'center', bold: true, sizePt: 12 });
 // 11-12: 注記
-rows.push(5, 5);
-set(11, 0, '判定基準：電気設備技術基準 第58条（使用電圧300V以下かつ対地電圧150V以下：0.1MΩ以上／300V以下でその他：0.2MΩ以上／300V超：0.4MΩ以上）', { sizePt: 7 });
+rows.push(8, 5); // 注記1は2行に折り返す
+set(11, 0, '判定基準：電気設備技術基準 第58条（使用電圧300V以下かつ対地電圧150V以下：0.1MΩ以上／300V以下でその他：0.2MΩ以上／300V超：0.4MΩ以上）', { sizePt: 7, wrap: true, vAlign: 'top' });
 merge(11, 0, 11, LAST);
 set(12, 0, '測定値の表記：「>2000」は測定範囲上限超過、「-」は測定対象外を示す。判定は各回路の測定値の最小値で行う。', { sizePt: 7 });
 merge(12, 0, 12, LAST);
 
 const sheet: Sheet = {
-  page: { size: 'A4', orientation: 'landscape', marginsMm: { t: 10, r: 10, b: 10, l: 10 }, repeatHeaderRows: [6, 7] },
+  page: { size: 'A4', orientation: 'portrait', marginsMm: { t: 10, r: 8, b: 10, l: 8 }, repeatHeaderRows: [6, 7] },
   colWidthsMm: cols,
   rowHeightsMm: rows,
   cells,
@@ -111,7 +111,7 @@ const sheet: Sheet = {
   images: [],
 };
 
-const template = TemplateSchema.parse({ id: 'default', name: '標準（A4横）', sheet });
+const template = TemplateSchema.parse({ id: 'default', name: '標準（A4縦）', sheet });
 const out = fileURLToPath(new URL('../templates/default.json', import.meta.url));
 writeFileSync(out, JSON.stringify(template, null, 1) + '\n');
 console.log(`wrote ${out}: ${rows.length} rows x ${cols.length} cols, width ${cols.reduce((a, b) => a + b, 0)}mm`);

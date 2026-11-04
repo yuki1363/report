@@ -172,7 +172,7 @@ export function FormatApp() {
             {
               label: '書式データを保存（JSON）',
               onClick: withLatest((sheet) => {
-                const name = prompt('書式の名前', '標準（A4横）') ?? '';
+                const name = prompt('書式の名前', '標準（A4縦）') ?? '';
                 if (!name.trim()) throw new Error('取り消しました');
                 const tpl = { id: `u-${crypto.randomUUID()}`, name: name.trim(), sheet };
                 downloadBlob(JSON.stringify(tpl, null, 1), `書式データ_${name.trim().replace(/[\\/:*?"<>|]/g, '_')}.json`, 'application/json');

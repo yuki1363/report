@@ -23,11 +23,12 @@ describe('Excel 出力', () => {
     const wb = new ExcelJS.Workbook();
     await wb.xlsx.load(buf as unknown as ArrayBuffer);
     const ws = wb.worksheets[0]!;
-    expect(ws.pageSetup.orientation).toBe('landscape');
+    expect(ws.pageSetup.orientation).toBe('portrait');
     expect(ws.pageSetup.paperSize).toBe(9);
     expect(ws.pageSetup.printTitlesRow).toBe('7:8');
     expect(ws.pageSetup.printArea).toBe(`A1:P${sheet.rowHeightsMm.length}`);
-    expect(ws.pageSetup.margins!.left).toBeCloseTo(10 / 25.4, 5);
+    expect(ws.pageSetup.margins!.left).toBeCloseTo(8 / 25.4, 5); // 左右の余白は 8mm
+    expect(ws.pageSetup.margins!.top).toBeCloseTo(10 / 25.4, 5);
     expect(ws.getCell('A1').value).toBe('絶縁抵抗測定報告書');
     expect(ws.getCell('A1').isMerged).toBe(true);
     expect(ws.getRow(9).height).toBeCloseTo(mmToPt(7), 1);

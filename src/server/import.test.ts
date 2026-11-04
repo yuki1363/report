@@ -144,7 +144,7 @@ describe('テンプレート・Excel・バックアップ', () => {
     const t = (await (await app.request(base + '/api/templates/default', { headers: H })).json()) as { sheet: unknown };
     const created = (await (await json('/api/templates', 'POST', { name: '社内様式A', sheet: t.sheet })).json()) as { id: string };
     const list = (await (await app.request(base + '/api/templates', { headers: H })).json()) as { name: string; builtin: boolean }[];
-    expect(list.map((x) => `${x.name}:${x.builtin}`)).toEqual(['標準（A4横）:true', '社内様式A:false']);
+    expect(list.map((x) => `${x.name}:${x.builtin}`)).toEqual(['標準（A4縦）:true', '社内様式A:false']);
     expect((await json(`/api/templates/${created.id}`, 'PUT', { name: '社内様式B', sheet: t.sheet })).status).toBe(200);
     expect((await json('/api/templates/default', 'PUT', { name: 'x', sheet: t.sheet })).status).toBe(404);
     expect((await app.request(`${base}/api/templates/${created.id}`, { method: 'DELETE', headers: H })).status).toBe(200);
