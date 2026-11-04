@@ -17,6 +17,8 @@ function pdfjsAssets(): Plugin {
 
 export default defineConfig({
   root: 'src/client',
+  // 画面の版（作成スクリプトが付ける。開発時は 'dev'）。画面が古いままでないかの確認に使う
+  define: { __APP_BUILD__: JSON.stringify(process.env.BUILD_ID ?? 'dev') },
   plugins: [pdfjsAssets(), react()],
   build: { outDir: '../../dist/client', emptyOutDir: true, chunkSizeWarningLimit: 2000 },
   server: {

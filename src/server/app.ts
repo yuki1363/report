@@ -61,6 +61,7 @@ export function createApp({ store, dataDir, paths, pdf = htmlToPdf, extractors =
   // ローカル専用の防御: Host ヘッダ検査（DNS リバインディング対策）と、
   // 変更系リクエストは JSON か独自ヘッダ付き multipart に限定（他サイトからのフォーム送信=CSRF を防ぐ）
   app.use('/api/*', async (c, next) => {
+    c.header('Cache-Control', 'no-store');
     const host = (c.req.header('host') ?? '').replace(/:\d+$/, '');
     if (!['localhost', '127.0.0.1', '[::1]'].includes(host)) return c.json({ error: 'forbidden host' }, 403);
     if (['POST', 'PUT', 'DELETE'].includes(c.req.method)) {
@@ -86,7 +87,7 @@ export function createApp({ store, dataDir, paths, pdf = htmlToPdf, extractors =
     return c.json({ error: err.message }, 500);
   });
 
-  app.get('/api/health', (c) => c.json({ ok: true }));
+  app.get('/api/health', (c) => c.json({ ok: true, build: process.env.APP_BUILD ?? 'dev' }));
 
   // --- テンプレート ---
   const allTemplates = (): (Template & { builtin: boolean })[] => [

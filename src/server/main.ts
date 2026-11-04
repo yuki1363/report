@@ -38,9 +38,15 @@ const app = createApp({ store, dataDir: DATA_DIR, paths: { home: paths.home, dat
 if (existsSync(CLIENT_DIR)) {
   // serveStatic の root はカレントディレクトリ基準の相対パス
   const root = relative(process.cwd(), CLIENT_DIR) || '.';
+  // 画面の入口（index.html）は毎回読み直す。ファイル名に版が入る assets/ は長く覚えてよい。
+  // （指定が無いと、ブラウザが更新前の古い画面を再利用して、新しい版が反映されないことがある）
+  app.use('/*', async (c, next) => {
+    await next();
+    c.header('Cache-Control', c.req.path.startsWith('/assets/') ? 'public, max-age=31536000, immutable' : 'no-cache');
+  });
   app.use('/*', serveStatic({ root }));
   const indexHtml = readFileSync(join(CLIENT_DIR, 'index.html'), 'utf8');
-  app.get('*', (c) => (c.req.path.startsWith('/api/') ? c.json({ error: 'not found' }, 404) : c.html(indexHtml)));
+  app.get('*', (c) => (c.req.path.startsWith('/api/') ? c.json({ error: 'not found' }, 404) : (c.header('Cache-Control', 'no-cache'), c.html(indexHtml))));
 }
 
 const server = serve({ fetch: app.fetch, port: PORT, hostname: '127.0.0.1' }, (info) => {

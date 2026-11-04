@@ -33,9 +33,12 @@ const out = join(root, 'release', name);
 const cacheDir = join(root, '.cache');
 const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
 
+// 画面とサーバーに同じ「版」を埋め込む（古い画面が残っていないかの確認に使う）
+const gitShort = spawnSync('git', ['rev-parse', '--short', 'HEAD'], { cwd: root, encoding: 'utf8' }).stdout?.trim();
+const BUILD_ID = `${new Date().toISOString().slice(0, 16).replace('T', ' ')}${gitShort ? ` ${gitShort}` : ''}`;
 const log = (m) => console.log(`[package] ${m}`);
-const run = (cmd, argv, cwd = root) => {
-  const r = spawnSync(cmd, argv, { cwd, stdio: 'inherit', shell: process.platform === 'win32' });
+const run = (cmd, argv, cwd = root, env = process.env) => {
+  const r = spawnSync(cmd, argv, { cwd, env, stdio: 'inherit', shell: process.platform === 'win32' });
   if (r.status !== 0) throw new Error(`${cmd} ${argv.join(' ')} が失敗しました`);
 };
 
@@ -45,7 +48,7 @@ mkdirSync(out, { recursive: true });
 
 // 2. 画面をビルド
 log('画面をビルド');
-run('npx', ['vite', 'build']);
+run('npx', ['vite', 'build'], root, { ...process.env, BUILD_ID });
 cpSync(join(root, 'dist/client'), join(out, 'dist/client'), { recursive: true });
 
 // 3. サーバーを1ファイルにまとめる（ネイティブ部品・ワーカーを使う部品は外出し）
@@ -63,7 +66,7 @@ await build({
   // CommonJS 依存（dotenv など）の require を ESM で動かすための shim
   banner: { js: "import { createRequire as __cr } from 'node:module'; const require = __cr(import.meta.url);" },
   // ポータブル版: データは新しい版に更新しても残る固定の場所（%APPDATA%\InsulationReport）に保存する
-  define: { 'process.env.APP_PORTABLE': '"1"' },
+  define: { 'process.env.APP_PORTABLE': '"1"', 'process.env.APP_BUILD': JSON.stringify(BUILD_ID) },
   legalComments: 'none',
   logLevel: 'warning',
 });
@@ -132,7 +135,7 @@ if (isWin) {
   writeFileSync(join(out, 'start.sh'), '#!/bin/sh\ncd "$(dirname "$0")"\n[ -f .env ] || cp .env.example .env\nexec ./node/node dist/server/main.mjs "$@"\n');
   chmodSync(join(out, 'start.sh'), 0o755);
 }
-writeFileSync(join(out, 'VERSION.txt'), `${pkg.name} ${pkg.version}\nNode.js ${isWin ? NODE_VERSION : process.version}\n作成日時 ${new Date().toISOString()}\n`);
+writeFileSync(join(out, 'VERSION.txt'), `${pkg.name} ${pkg.version}\n版 ${BUILD_ID}\nNode.js ${isWin ? NODE_VERSION : process.version}\n作成日時 ${new Date().toISOString()}\n`);
 
 // 8. zip
 if (makeZip) {

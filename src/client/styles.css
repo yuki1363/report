@@ -181,3 +181,6 @@ td.dropped { color: var(--bad); font-weight: bold; background: #fee2e2; }
 .header-form label.wide { grid-column: 1 / -1; }
 .header-form textarea { width: 100%; font: inherit; color: var(--fg); font-size: 14px; border: 1px solid var(--line); border-radius: 3px; padding: 4px 6px; resize: vertical; }
 .inline-label { display: flex; flex-direction: column; gap: 4px; font-size: 14px; color: var(--fg); }
+
+.topbar .build { margin-left: auto; font-size: 11px; color: #9ca3af; }
+.warn.stale { margin: 0; border-radius: 0; text-align: center; }

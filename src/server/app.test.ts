@@ -85,6 +85,12 @@ describe('API', () => {
     expect(lastHtml).toBe(html);
   });
 
+  it('版を返し、API は毎回最新を読ませる（古い画面・古いデータを再利用させない）', async () => {
+    const res = await req('/api/health');
+    expect(((await res.json()) as { build: string }).build).toBe('dev');
+    expect(res.headers.get('cache-control')).toBe('no-store');
+  });
+
   it('削除', async () => {
     expect((await req(`/api/reports/${report.id}`, { method: 'DELETE' })).status).toBe(204);
     expect((await req(`/api/reports/${report.id}`)).status).toBe(404);

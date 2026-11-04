@@ -33,8 +33,21 @@ function route(hash: string) {
   return <ReportList />;
 }
 
+/** 画面（ブラウザ）の版とサーバーの版が違うと、古い画面が残っている */
+function useBuildCheck(): { server: string | null; stale: boolean } {
+  const [server, setServer] = useState<string | null>(null);
+  useEffect(() => {
+    fetch('/api/health', { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((j: { build?: string }) => setServer(j.build ?? null))
+      .catch(() => {});
+  }, []);
+  return { server, stale: server !== null && server !== __APP_BUILD__ };
+}
+
 export function App() {
   const hash = useHash();
+  const build = useBuildCheck();
   const top = hash.split('?')[0]!;
   const nav = (href: string, label: string, match: (h: string) => boolean) => (
     <a href={href} className={match(top) ? 'active' : ''}>
@@ -52,7 +65,13 @@ export function App() {
           {nav('#/templates', '書式テンプレート', (h) => h.startsWith('#/templates'))}
           {nav('#/settings', '設定', (h) => h === '#/settings')}
         </nav>
+        <span className="build" title="アプリの版（更新後に表示が変わらないときの確認用）">版 {__APP_BUILD__}</span>
       </header>
+      {build.stale && (
+        <p className="warn stale">
+          画面が古い版のままです（画面 {__APP_BUILD__} ／ アプリ {build.server}）。<strong>Ctrl キーを押しながら F5</strong> を押して、読み込み直してください。
+        </p>
+      )}
       <main>{route(hash)}</main>
     </div>
   );
