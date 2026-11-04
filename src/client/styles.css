@@ -171,3 +171,9 @@ td.dropped { color: var(--bad); font-weight: bold; background: #fee2e2; }
 .confirm-right label.check.include { flex-direction: row; align-items: center; gap: 6px; font-size: 14px; color: var(--fg); margin: 4px 0; }
 .rot-box { position: relative; container-type: inline-size; background: #fff; overflow: hidden; }
 .rot-box img { position: absolute; left: 50%; top: 50%; max-width: none; transform-origin: center; }
+
+/* --- 回路の貼り付け --- */
+.modal.wide { width: min(860px, 96vw); }
+.paste-area { width: 100%; height: 130px; margin: 8px 0; font-family: monospace; font-size: 13px; border: 1px solid var(--line); border-radius: 4px; padding: 6px; }
+.paste-preview { max-height: 240px; overflow: auto; margin-bottom: 8px; }
+.paste-preview table td.muted { color: #9ca3af; }

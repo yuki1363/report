@@ -18,6 +18,8 @@ import {
 } from '../../shared/schema.ts';
 import { api, type TemplateSummary } from '../api.ts';
 import { MeggerDialog } from '../MeggerDialog.tsx';
+import { PasteDialog } from '../PasteDialog.tsx';
+import type { PastedCircuit } from '../../domain/pasteCircuits.ts';
 import { SheetEditor } from '../SheetEditor.tsx';
 
 type SaveState = 'saved' | 'dirty' | 'saving' | 'error';
@@ -62,6 +64,7 @@ export function ReportEditor({ id }: { id: string }) {
   const [formatDirty, setFormatDirty] = useState(false);
   const [comparison, setComparison] = useState<PreviousComparison | null>(null);
   const [megger, setMegger] = useState<{ row: number; key: ReadingKey } | null>(null);
+  const [pasting, setPasting] = useState(false);
   const lastCell = useRef<{ row: number; key: ReadingKey }>({ row: 0, key: 'RE' });
   const saveTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const latest = useRef<Report | null>(null);
@@ -296,6 +299,9 @@ export function ReportEditor({ id }: { id: string }) {
         <>
           <HeaderForm report={report} instruments={instruments} templates={templates} update={update} />
           <div className="toolbar sub">
+            <button onClick={() => setPasting(true)} title="Excel などの表をコピーして、まとめて追加します">
+              📋 回路を貼り付けて追加
+            </button>
             <a className="button" href={`#/import/${report.id}`} onClick={() => void flush()}>
               📄 図面から回路を追加
             </a>
@@ -324,6 +330,34 @@ export function ReportEditor({ id }: { id: string }) {
             onCellFocus={(row, key) => (lastCell.current = { row, key })}
           />
         </>
+      )}
+      {pasting && (
+        <PasteDialog
+          defaultSystem={report.circuits.at(-1)?.system ?? '1φ3W'}
+          defaultVoltage={report.circuits.at(-1)?.useVoltage ?? 200}
+          onClose={() => setPasting(false)}
+          onApply={(list: PastedCircuit[]) => {
+            update((r) => ({
+              ...r,
+              circuits: [
+                ...r.circuits,
+                ...list.map((c) => ({
+                  id: newId(),
+                  no: c.no,
+                  name: c.name,
+                  system: c.system,
+                  useVoltage: c.useVoltage,
+                  groundVoltage: autoGroundVoltage(c.system, c.useVoltage),
+                  testVoltage: defaultTestVoltage(c.useVoltage),
+                  ...(c.breakerA !== undefined ? { breakerA: c.breakerA } : {}),
+                  readings: {},
+                  source: 'manual' as const,
+                })),
+              ],
+            }));
+            setPasting(false);
+          }}
+        />
       )}
       {megger && (
         <MeggerDialog
