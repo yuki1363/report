@@ -11,6 +11,21 @@
 `.env.example` を `.env` にコピーすると、ポート・PDF 用ブラウザ・データ保存先などを変更できる。
 PDF 出力には PC にインストール済みの **Microsoft Edge** を使う（Chromium の追加ダウンロードは不要）。
 
+## ポータブル版（Node.js 同梱・インストール不要）
+社内PCに Node.js を入れられない場合や、ネット接続に制限がある場合に使う。
+
+**作成**（インターネットに接続できる PC で1回だけ。Windows / Linux どちらでも可）
+```
+npm install
+npm run package:win
+```
+→ `release/insulation-report-win-x64.zip`（約 40MB）ができる。
+Node.js 本体（v24 LTS）は nodejs.org から取得し、SHA256 を検証して `node.exe` だけを同梱する。
+社内プロキシ経由で取得に失敗する場合は、`NODE_USE_ENV_PROXY=1` と `HTTPS_PROXY` を設定して再実行する。
+
+**社内PCでの使い方**: zip を USB・共有フォルダ等でコピー → 展開 → `start.bat`。詳しくは同梱の README.txt。
+データは展開先の `data\` に保存される。
+
 ## 開発
 ```
 npm run dev         # サーバー(8787) + Vite(5173, ホットリロード)

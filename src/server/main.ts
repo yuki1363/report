@@ -32,6 +32,18 @@ const server = serve({ fetch: app.fetch, port: PORT, hostname: '127.0.0.1' }, (i
   if (!process.argv.includes('--no-open')) openBrowser(url);
 });
 
+server.on('error', (err: NodeJS.ErrnoException) => {
+  if (err.code === 'EADDRINUSE') {
+    const url = `http://localhost:${PORT}/`;
+    console.error(`ポート ${PORT} は使用中です。アプリが既に起動している可能性があります: ${url}`);
+    console.error('別のソフトが使っている場合は、.env の PORT を変更してください。');
+    if (!process.argv.includes('--no-open')) openBrowser(url);
+    store.close();
+    process.exit(2);
+  }
+  throw err;
+});
+
 const shutdown = async () => {
   await closePdfBrowser();
   server.close();
