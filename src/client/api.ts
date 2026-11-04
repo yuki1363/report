@@ -49,6 +49,7 @@ export interface SettingsResponse {
   criteria: Criteria;
   model: string;
   apiKeyConfigured: boolean;
+  paths: { home: string; dataDir: string; portable: boolean };
 }
 
 export interface TemplateSummary {
@@ -101,5 +102,6 @@ export const api = {
 
   downloadPdf: (id: string) => download(`/api/reports/${id}/pdf`, 'report.pdf'),
   downloadXlsx: (id: string) => download(`/api/reports/${id}/xlsx`, 'report.xlsx'),
+  restore: (fd: FormData) => upload<{ reports: number; templates: number; skippedOlder: number; invalid: number }>('/api/restore', fd),
   downloadBackup: () => download('/api/backup', 'report-backup.db'),
 };

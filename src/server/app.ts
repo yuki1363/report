@@ -1,7 +1,7 @@
 /** HTTP API（Hono）。localhost 専用。 */
 import { Hono } from 'hono';
 import { randomUUID } from 'node:crypto';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { z } from 'zod';
@@ -31,6 +31,8 @@ export interface AppDeps {
   store: Store;
   /** 取込ファイルの保存先（data/） */
   dataDir: string;
+  /** 保存先の情報（設定画面に表示する） */
+  paths?: { home: string; dataDir: string; portable: boolean };
   /** テスト用に差し替え可能 */
   pdf?: (html: string) => Promise<Buffer>;
   extractors?: Partial<Extractors>;
@@ -53,7 +55,7 @@ export function contentDisposition(filename: string): string {
   return `attachment; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(filename)}`;
 }
 
-export function createApp({ store, dataDir, pdf = htmlToPdf, extractors = {} }: AppDeps): Hono {
+export function createApp({ store, dataDir, paths, pdf = htmlToPdf, extractors = {} }: AppDeps): Hono {
   const app = new Hono();
 
   // ローカル専用の防御: Host ヘッダ検査（DNS リバインディング対策）と、
@@ -205,9 +207,28 @@ export function createApp({ store, dataDir, pdf = htmlToPdf, extractors = {} }: 
       criteria: DEFAULT_CRITERIA,
       model: claudeModel(),
       apiKeyConfigured: Boolean(process.env.ANTHROPIC_API_KEY),
+      paths: paths ?? { home: '', dataDir, portable: false },
     }),
   );
   app.put('/api/settings', async (c) => c.json(store.saveSettings(SettingsSchema.parse(await c.req.json()))));
+
+  /** 取り込み: バックアップの .db、または旧版の data/app.db から報告書・テンプレートを取り込む（既存は消さない） */
+  app.post('/api/restore', async (c) => {
+    const body = await c.req.parseBody();
+    const f = body['file'];
+    if (!(f instanceof File)) return c.json({ error: 'ファイルを指定してください' }, 400);
+    if (f.size > 500 * 1024 * 1024) return c.json({ error: 'ファイルが大きすぎます（上限 500MB）' }, 413);
+    const dir = mkdtempSync(join(tmpdir(), 'report-restore-'));
+    const file = join(dir, 'import.db');
+    try {
+      writeFileSync(file, Buffer.from(await f.arrayBuffer()));
+      return c.json(store.importFrom(file));
+    } catch (e) {
+      return c.json({ error: (e as Error).message }, 400);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
 
   /** バックアップ: データベース（報告書・テンプレート・設定・取込の記録）を1ファイルでダウンロード */
   app.get('/api/backup', async (c) => {

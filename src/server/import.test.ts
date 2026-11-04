@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
@@ -157,5 +157,35 @@ describe('テンプレート・Excel・バックアップ', () => {
     expect(new Uint8Array(await x.arrayBuffer()).subarray(0, 2)).toEqual(new Uint8Array([0x50, 0x4b])); // zip
     const b = await app.request(`${base}/api/backup`, { headers: H });
     expect(Buffer.from(await b.arrayBuffer()).subarray(0, 15).toString()).toBe('SQLite format 3');
+  });
+});
+
+describe('以前のデータの取り込み（バックアップ・旧版の app.db）', () => {
+  it('別のデータベースから取り込む。既存は消さず、新しい方だけ置き換える', async () => {
+    const other = new Store(':memory:');
+    const file = join(dataDir, 'other.db');
+    // 取り込み元: 報告書2件（1件は同じ ID で既存より古い）
+    const mk = (id: string, name: string) => ({ id, templateId: 'default', panel: { name }, date: '2026-11-04', inspector: '', instrument: { model: '' }, circuits: [], sourceFiles: [] });
+    other.saveReport(mk('r-new', '新しい盤'));
+    other.saveReport(mk('r-same', '古い方の名前'));
+    await other.backupTo(file);
+    other.close();
+    store.saveReport(mk('r-same', '既にある方（新しい）'));
+    const before = store.listReports().length;
+    const fd = new FormData();
+    fd.append('file', new File([readFileSync(file)], 'app.db'));
+    const res = await app.request(base + '/api/restore', { method: 'POST', body: fd, headers: { ...H, 'x-report-app': '1' } });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ reports: 1, skippedOlder: 1, invalid: 0 });
+    expect(store.listReports().length).toBe(before + 1);
+    expect(store.getReport('r-same')!.panel.name).toBe('既にある方（新しい）');
+    expect(store.getReport('r-new')!.panel.name).toBe('新しい盤');
+  });
+  it('データベースでないファイルは理由つきで断る', async () => {
+    const fd = new FormData();
+    fd.append('file', new File(['これはデータベースではありません'], 'x.db'));
+    const res = await app.request(base + '/api/restore', { method: 'POST', body: fd, headers: { ...H, 'x-report-app': '1' } });
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toContain('データベース');
   });
 });

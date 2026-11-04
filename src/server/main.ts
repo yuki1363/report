@@ -1,22 +1,39 @@
 /** ローカルサーバー起動。npm start / start.bat から呼ばれる。 */
-import 'dotenv/config';
+import { config as loadEnv } from 'dotenv';
 import { serve } from '@hono/node-server';
 import { serveStatic } from '@hono/node-server/serve-static';
 import { existsSync, readFileSync } from 'node:fs';
-import { join, relative, resolve } from 'node:path';
+import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createApp } from './app.ts';
 import { Store } from './db.ts';
 import { openBrowser } from './openBrowser.ts';
+import { prepareFirstRun, resolvePaths } from './paths.ts';
 import { closePdfBrowser } from './pdf.ts';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
 const CLIENT_DIR = join(ROOT, 'dist/client');
+
+// ポータブル版かどうかは、作成スクリプトがビルド時に決める（開発時は未定義）
+const PORTABLE = process.env.APP_PORTABLE === '1';
+// データの置き場所は .env の DATA_DIR より前に決める必要があるため、先に保存先の .env を読む
+const first = resolvePaths({ root: ROOT, portable: PORTABLE, env: process.env });
+loadEnv({ path: join(first.home, '.env'), quiet: true });
+loadEnv({ path: join(ROOT, '.env'), quiet: true }); // 保存先に無い設定は、アプリのフォルダの .env から（先に読んだ方が優先）
+const paths = resolvePaths({ root: ROOT, portable: PORTABLE, env: process.env });
+if (PORTABLE) {
+  const r = prepareFirstRun(paths, ROOT);
+  if (r.createdEnv) console.log(`設定ファイルを作成しました: ${join(paths.home, '.env')}`);
+  if (r.migratedData) console.log(`以前のデータを引き継ぎました: ${paths.dataDir}`);
+  // 初回に作った .env を読み込む
+  loadEnv({ path: join(paths.home, '.env'), quiet: true });
+}
 const PORT = Number(process.env.PORT || 8787);
-const DATA_DIR = resolve(ROOT, process.env.DATA_DIR || './data');
+const DATA_DIR = paths.dataDir;
+console.log(`データの保存先: ${DATA_DIR}`);
 
 const store = new Store(join(DATA_DIR, 'app.db'));
-const app = createApp({ store, dataDir: DATA_DIR });
+const app = createApp({ store, dataDir: DATA_DIR, paths: { home: paths.home, dataDir: DATA_DIR, portable: PORTABLE } });
 
 if (existsSync(CLIENT_DIR)) {
   // serveStatic の root はカレントディレクトリ基準の相対パス

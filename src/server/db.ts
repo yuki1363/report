@@ -14,6 +14,23 @@ import {
   type Settings,
 } from '../shared/schema.ts';
 
+export interface ImportFromResult {
+  reports: number;
+  templates: number;
+  /** 既にある方が新しいので取り込まなかった件数 */
+  skippedOlder: number;
+  /** 形式が不正で取り込めなかった件数 */
+  invalid: number;
+}
+
+function safeJson(text: string): unknown {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return undefined;
+  }
+}
+
 export class Store {
   readonly db: Database.Database;
 
@@ -159,6 +176,75 @@ export class Store {
   /** 稼働中でも安全に DB をファイルへ複製する */
   async backupTo(file: string): Promise<void> {
     await this.db.backup(file);
+  }
+
+  /**
+   * 別のデータベース（バックアップの .db、または旧版の data/app.db）から、報告書とテンプレートを取り込む。
+   * 既存のデータは消さない。同じ ID は、取り込む側の更新日時が新しい場合だけ置き換える。
+   * 形式が不正な項目は取り込まず、件数で返す。
+   */
+  importFrom(file: string): ImportFromResult {
+    let src: Database.Database;
+    try {
+      src = new Database(file, { readonly: true, fileMustExist: true });
+    } catch {
+      throw new Error('データベースのファイルとして開けませんでした');
+    }
+    try {
+      let tables: Set<string>;
+      try {
+        tables = new Set((src.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all() as { name: string }[]).map((t) => t.name));
+      } catch {
+        // ファイルの先頭が SQLite でないときは、開くだけでは失敗せず、最初の読み取りで失敗する
+        throw new Error('データベースのファイルとして開けませんでした（バックアップの .db か、旧版の data\\app.db を選んでください）');
+      }
+      if (!tables.has('reports')) throw new Error('報告書のバックアップ（.db）ではありません');
+      const result: ImportFromResult = { reports: 0, templates: 0, skippedOlder: 0, invalid: 0 };
+      const newer = (table: 'reports' | 'templates', id: string, updated: string): boolean => {
+        const cur = this.db.prepare(`SELECT updated_at FROM ${table} WHERE id = ?`).get(id) as { updated_at: string } | undefined;
+        return !cur || cur.updated_at < updated;
+      };
+      const tx = this.db.transaction(() => {
+        for (const row of src.prepare('SELECT id, data, created_at, updated_at FROM reports').all() as { id: string; data: string; created_at: string; updated_at: string }[]) {
+          const parsed = ReportSchema.safeParse(safeJson(row.data));
+          if (!parsed.success) {
+            result.invalid++;
+          } else if (!newer('reports', parsed.data.id, row.updated_at)) {
+            result.skippedOlder++;
+          } else {
+            this.db
+              .prepare(
+                `INSERT INTO reports (id, data, created_at, updated_at) VALUES (?, ?, ?, ?)
+                 ON CONFLICT(id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at`,
+              )
+              .run(parsed.data.id, JSON.stringify(parsed.data), row.created_at, row.updated_at);
+            result.reports++;
+          }
+        }
+        if (tables.has('templates')) {
+          for (const row of src.prepare('SELECT id, name, data, updated_at FROM templates').all() as { id: string; name: string; data: string; updated_at: string }[]) {
+            const parsed = TemplateSchema.safeParse(safeJson(row.data));
+            if (!parsed.success) {
+              result.invalid++;
+            } else if (!newer('templates', parsed.data.id, row.updated_at)) {
+              result.skippedOlder++;
+            } else {
+              this.db
+                .prepare(
+                  `INSERT INTO templates (id, name, data, updated_at) VALUES (?, ?, ?, ?)
+                   ON CONFLICT(id) DO UPDATE SET name = excluded.name, data = excluded.data, updated_at = excluded.updated_at`,
+                )
+                .run(parsed.data.id, parsed.data.name, JSON.stringify(parsed.data), row.updated_at);
+              result.templates++;
+            }
+          }
+        }
+      });
+      tx();
+      return result;
+    } finally {
+      src.close();
+    }
   }
 
   close(): void {

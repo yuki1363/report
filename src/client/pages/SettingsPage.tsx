@@ -116,10 +116,48 @@ export function SettingsPage() {
       </fieldset>
 
       <fieldset>
-        <legend>バックアップ</legend>
+        <legend>データの保存先・バックアップ・引き継ぎ</legend>
         <p>
-          データはアプリフォルダ内の <code>data/</code> に保存されています。アプリを終了してから <code>data/</code> フォルダごとコピーしてください。
-          （画面からのバックアップ機能は今後追加予定）
+          データの保存先: <code>{data.paths.dataDir}</code>
+        </p>
+        {data.paths.portable && (
+          <p className="muted">
+            新しい版の zip を別のフォルダに展開して起動しても、この場所のデータがそのまま使われます（設定ファイル <code>.env</code> も <code>{data.paths.home}</code> にあります）。
+          </p>
+        )}
+        <p>
+          <button onClick={() => api.downloadBackup().catch((e: Error) => setError(e.message))}>バックアップをダウンロード（.db）</button>{' '}
+          報告書・テンプレート・設定を1ファイルで保存します。
+        </p>
+        <p>
+          <label className="inline-label">
+            以前のデータを取り込む（バックアップの .db、または旧版の <code>data\app.db</code>）
+            <input
+              type="file"
+              accept=".db,application/octet-stream"
+              onChange={async (e) => {
+                const f = e.target.files?.[0];
+                e.target.value = '';
+                if (!f) return;
+                setMsg('');
+                try {
+                  const fd = new FormData();
+                  fd.append('file', f, f.name);
+                  const r = await api.restore(fd);
+                  setMsg(
+                    `取り込みました: 報告書 ${r.reports} 件、テンプレート ${r.templates} 件` +
+                      (r.skippedOlder ? `（既にある方が新しいため ${r.skippedOlder} 件は取り込まず）` : '') +
+                      (r.invalid ? `（形式が不正で ${r.invalid} 件は取り込めず）` : ''),
+                  );
+                } catch (err) {
+                  setError((err as Error).message);
+                }
+              }}
+            />
+          </label>
+        </p>
+        <p className="muted">
+          取り込みは追加です。いまのデータは消えません（同じ報告書は、取り込む側が新しい場合だけ置き換えます）。取り込んだ図面・写真の画像は、取り込み対象ではありません。
         </p>
       </fieldset>
     </section>

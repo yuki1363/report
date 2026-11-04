@@ -8,8 +8,6 @@ if not exist "node\node.exe" (
   pause
   exit /b 1
 )
-if not exist ".env" copy ".env.example" ".env" > nul
-
 echo 起動しています... このウィンドウを閉じるとアプリが終了します。
 "node\node.exe" "dist\server\main.mjs" %*
 if errorlevel 2 (

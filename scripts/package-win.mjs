@@ -62,6 +62,8 @@ await build({
   external: runtimeDeps,
   // CommonJS 依存（dotenv など）の require を ESM で動かすための shim
   banner: { js: "import { createRequire as __cr } from 'node:module'; const require = __cr(import.meta.url);" },
+  // ポータブル版: データは新しい版に更新しても残る固定の場所（%APPDATA%\InsulationReport）に保存する
+  define: { 'process.env.APP_PORTABLE': '"1"' },
   legalComments: 'none',
   logLevel: 'warning',
 });
