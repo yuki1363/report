@@ -114,7 +114,8 @@ describe('取込 → 読み取り → 確認・確定', () => {
 
   it('既存の報告書へ反映できる盤は1つだけ', async () => {
     const r3 = (await (await upload()).json()) as ImportRecord;
-    const target = store.listReports()[0]!.id;
+    // 並び順に頼らず、盤名で対象を決める（L-1 は回路2件）
+    const target = store.listReports().find((r) => r.panelName === '電灯盤 L-1')!.id;
     const p = { panel: { name: 'x', location: '' }, circuits: [{ no: '1', name: 'a', system: '1φ2W', useVoltage: 100 }] };
     const res = await json(`/api/imports/${r3.id}/confirm`, 'POST', { mode: 'append', targetReportId: target, applyPanel: false, panels: [p, p] });
     expect(res.status).toBe(400);
