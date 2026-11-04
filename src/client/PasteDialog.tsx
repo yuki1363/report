@@ -1,7 +1,7 @@
 /** 回路をまとめて貼り付けて追加する（Excel などからコピーした表をそのまま貼れる） */
 import { useMemo, useState } from 'react';
 import { parsePastedCircuits, type PastedCircuit } from '../domain/pasteCircuits.ts';
-import { parseVoltage } from '../domain/system.ts';
+import { parseVoltage, voltageLabel } from '../domain/system.ts';
 import { WIRING_SYSTEMS, type WiringSystem } from '../shared/schema.ts';
 
 export function PasteDialog({
@@ -11,16 +11,16 @@ export function PasteDialog({
   onClose,
 }: {
   defaultSystem: WiringSystem;
-  defaultVoltage: number;
+  defaultVoltage: string;
   onApply: (circuits: PastedCircuit[]) => void;
   onClose: () => void;
 }) {
   const [text, setText] = useState('');
   const [system, setSystem] = useState<WiringSystem>(defaultSystem);
-  const [volt, setVolt] = useState(String(defaultVoltage));
+  const [volt, setVolt] = useState(defaultVoltage);
   const v = parseVoltage(volt) ?? NaN;
   const voltOk = Number.isFinite(v) && v > 0;
-  const result = useMemo(() => parsePastedCircuits(text, { system, useVoltage: voltOk ? v : 100 }), [text, system, v, voltOk]);
+  const result = useMemo(() => parsePastedCircuits(text, { system, useVoltage: voltOk ? v : 100, ...(voltageLabel(volt) ? { voltageLabel: voltageLabel(volt)! } : {}) }), [text, system, v, voltOk, volt]);
 
   return (
     <div className="modal-backdrop" onClick={onClose}>

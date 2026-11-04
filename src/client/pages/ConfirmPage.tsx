@@ -333,7 +333,7 @@ export function ConfirmPage({ id, auto }: { id: string; auto: boolean }) {
                             title="この下に行を挿入"
                             onClick={() => {
                               const next = [...rows];
-                              next.splice(i + 1, 0, toRow({ no: null, name: null, system: r.system || null, useVoltage: parseVoltage(r.useVoltage) ?? null, breakerA: null }, {}));
+                              next.splice(i + 1, 0, { ...toRow({ no: null, name: null, system: r.system || null, useVoltage: null, breakerA: null }, {}), useVoltage: r.useVoltage });
                               setRows(() => next);
                             }}
                           >

@@ -32,6 +32,8 @@ export interface PasteResult {
 export interface PasteDefaults {
   system: WiringSystem;
   useVoltage: number;
+  /** 既定の電圧を「105/210」のように書いたときの表記 */
+  voltageLabel?: string;
 }
 
 const HEADER_RE = /^(No\.?|回路|負荷|ELB|MCB|番号)/i;
@@ -82,7 +84,7 @@ export function parsePastedCircuits(text: string, defaults: PasteDefaults): Past
       name,
       system,
       useVoltage: volt,
-      ...(voltText && voltageLabel(voltText) ? { voltageLabel: voltageLabel(voltText)! } : {}),
+      ...(voltText ? (voltageLabel(voltText) ? { voltageLabel: voltageLabel(voltText)! } : {}) : defaults.voltageLabel ? { voltageLabel: defaults.voltageLabel } : {}),
       ...(at !== undefined ? { breakerA: at } : {}),
       defaulted: [...(sysText ? [] : (['system'] as const)), ...(voltText ? [] : (['useVoltage'] as const))],
     });

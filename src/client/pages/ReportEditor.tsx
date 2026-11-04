@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 're
 import type { CircuitComparison, PreviousComparison } from '../../domain/compare.ts';
 import { autoGroundVoltage, DEFAULT_USE_VOLTAGE } from '../../domain/groundVoltage.ts';
 import { defaultTestVoltage } from '../../domain/importing.ts';
+import { newCircuit } from '../../domain/newCircuit.ts';
 import { parseVoltage, voltageLabel } from '../../domain/system.ts';
 import { isLowVoltage, LOW_VOLTAGE_MAX_V } from '../../domain/judgment.ts';
 import { judgeCircuit, VERDICT_LABEL, type Verdict } from '../../domain/judgment.ts';
@@ -26,23 +27,6 @@ import { SheetEditor } from '../SheetEditor.tsx';
 type SaveState = 'saved' | 'dirty' | 'saving' | 'error';
 
 const newId = () => crypto.randomUUID();
-
-export function newCircuit(prev?: Circuit): Circuit {
-  const system = prev?.system ?? '1φ3W';
-  const useVoltage = prev?.useVoltage ?? DEFAULT_USE_VOLTAGE[system];
-  const nextNo = prev && /^\d+$/.test(prev.no) ? String(Number(prev.no) + 1) : '';
-  return {
-    id: newId(),
-    no: nextNo || (prev ? '' : '1'),
-    name: '',
-    system,
-    useVoltage,
-    groundVoltage: autoGroundVoltage(system, useVoltage),
-    testVoltage: prev?.testVoltage ?? defaultTestVoltage(useVoltage),
-    readings: {},
-    source: 'manual',
-  };
-}
 
 /** 数値入力の解析。全角可。「105/210」のように書かれたら大きい方（使用電圧用） */
 const optNum = (s: string): number | undefined => {
@@ -336,7 +320,7 @@ export function ReportEditor({ id }: { id: string }) {
       {pasting && (
         <PasteDialog
           defaultSystem={report.circuits.at(-1)?.system ?? '1φ3W'}
-          defaultVoltage={report.circuits.at(-1)?.useVoltage ?? 200}
+          defaultVoltage={report.circuits.at(-1)?.voltageLabel ?? String(report.circuits.at(-1)?.useVoltage ?? 200)}
           onClose={() => setPasting(false)}
           onApply={(list: PastedCircuit[]) => {
             update((r) => ({
