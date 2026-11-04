@@ -307,6 +307,7 @@ export function ConfirmPage({ id, auto }: { id: string; auto: boolean }) {
             <table className="grid confirm-grid">
               <thead>
                 <tr>
+                  <th className="sticky-left"></th>
                   <th>No</th>
                   <th>回路名称</th>
                   <th>種別</th>
@@ -319,6 +320,13 @@ export function ConfirmPage({ id, auto }: { id: string; auto: boolean }) {
               <tbody>
                 {rows.map((r, i) => (
                   <tr key={r.rid} className={rowErrors[i]!.length ? 'row-error' : ''}>
+                    <td className="sticky-left del-col">
+                      {!confirmed && (
+                        <button tabIndex={-1} className="danger del-x" title="この回路を削除" onClick={() => setRows((rs) => rs.filter((x) => x.rid !== r.rid))}>
+                          ×
+                        </button>
+                      )}
+                    </td>
                     <td className={uncCls(r.unc.no)} title={r.unc.no}>
                       <input className="no" value={r.no} disabled={confirmed} onChange={(e) => setRow(r.rid, { no: e.target.value }, 'no')} />
                     </td>
@@ -371,9 +379,6 @@ export function ConfirmPage({ id, auto }: { id: string; auto: boolean }) {
                             }}
                           >
                             ＋
-                          </button>
-                          <button tabIndex={-1} className="danger" title="削除" onClick={() => setRows((rs) => rs.filter((x) => x.rid !== r.rid))}>
-                            ×
                           </button>
                         </>
                       )}

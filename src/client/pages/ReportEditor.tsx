@@ -642,6 +642,7 @@ function CircuitGrid({
       >
         <thead>
           <tr>
+            <th rowSpan={2} className="sticky-left" title="左の × で、その行の回路を削除します"></th>
             <th rowSpan={2}>No</th>
             <th rowSpan={2}>回路名称</th>
             <th rowSpan={2} title="ELB・MCB・Mg など（自由に書けます）">種別</th>
@@ -668,6 +669,17 @@ function CircuitGrid({
             const auto = c.system ? autoGroundVoltage(c.system, c.useVoltage) : 0;
             return (
               <tr key={c.id}>
+                <td className="sticky-left del-col">
+                  <button
+                    tabIndex={-1}
+                    className="danger del-x"
+                    title="この回路を削除"
+                    aria-label={`回路「${c.no} ${c.name}」を削除`}
+                    onClick={() => confirm(`回路「${c.no} ${c.name}」を削除しますか？`) && removeCircuit(c.id)}
+                  >
+                    ×
+                  </button>
+                </td>
                 <td>
                   <input className="no" value={c.no} {...cellProps(i, 'no')} onChange={(e) => updateCircuit(c.id, (x) => ({ ...x, no: e.target.value }))} />
                 </td>
@@ -782,14 +794,6 @@ function CircuitGrid({
                   </button>
                   <button tabIndex={-1} title="この下に行を挿入" onClick={() => addCircuit(i)}>
                     ＋
-                  </button>
-                  <button
-                    tabIndex={-1}
-                    className="danger"
-                    title="この回路を削除"
-                    onClick={() => confirm(`回路「${c.no} ${c.name}」を削除しますか？`) && removeCircuit(c.id)}
-                  >
-                    削除
                   </button>
                 </td>
               </tr>

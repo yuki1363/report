@@ -206,3 +206,10 @@ table.list tr.picked td { background: #eff6ff; }
 .combo-pop li:hover { background: #dbeafe; }
 .combo-pop li.on { font-weight: bold; background: #eff6ff; }
 table.grid td .combo input { width: auto; }
+
+/* 回路の削除（×）は表の左端に固定。表が横に長くても、いつも見える */
+table.grid .sticky-left { position: sticky; left: 0; z-index: 1; background: #fff; box-shadow: 2px 0 0 #e5e7eb; }
+table.grid th.sticky-left { background: #f9fafb; z-index: 2; }
+table.grid td.del-col { width: 2em; padding: 0; text-align: center; }
+table.grid td.del-col .del-x { padding: 0 6px; font-size: 14px; line-height: 1.4; border-color: transparent; background: transparent; }
+table.grid td.del-col .del-x:hover { background: #fee2e2; border-color: #fca5a5; }
