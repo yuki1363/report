@@ -1,7 +1,7 @@
 /** 回路をまとめて貼り付けて追加する（Excel などからコピーした表をそのまま貼れる） */
 import { useMemo, useState } from 'react';
 import { parsePastedCircuits, type PastedCircuit } from '../domain/pasteCircuits.ts';
-import { parseVoltage, voltageLabel } from '../domain/system.ts';
+import { patternFor, VOLTAGE_PATTERNS, VOLTAGE_PATTERN_TEXT } from '../domain/voltagePattern.ts';
 import { WIRING_SYSTEMS, type WiringSystem } from '../shared/schema.ts';
 
 export function PasteDialog({
@@ -18,9 +18,11 @@ export function PasteDialog({
   const [text, setText] = useState('');
   const [system, setSystem] = useState<WiringSystem>(defaultSystem);
   const [volt, setVolt] = useState(defaultVoltage);
-  const v = parseVoltage(volt) ?? NaN;
-  const voltOk = Number.isFinite(v) && v > 0;
-  const result = useMemo(() => parsePastedCircuits(text, { system, useVoltage: voltOk ? v : 100, ...(voltageLabel(volt) ? { voltageLabel: voltageLabel(volt)! } : {}) }), [text, system, v, voltOk, volt]);
+  const pat = patternFor(volt) ?? VOLTAGE_PATTERNS[2]!;
+  const result = useMemo(
+    () => parsePastedCircuits(text, { system, useVoltage: pat.useVoltage, ...(pat.label ? { voltageLabel: pat.label } : {}) }),
+    [text, system, pat.useVoltage, pat.label],
+  );
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -29,7 +31,7 @@ export function PasteDialog({
         <p className="muted small">
           Excel などの表をコピーして、下の欄に貼り付けてください。列の順は
           <strong>「回路No ／ 回路名称 ／ 電気方式 ／ 使用電圧 ／ ブレーカ容量(AT)」</strong>です。
-          電気方式・使用電圧・ブレーカ容量は空欄や列なしでも構いません（空欄は下の既定値を使います）。名称だけの貼り付けも可能です（番号は自動）。
+          電気方式・使用電圧・ブレーカ容量は空欄や列なしでも構いません（空欄は下の既定値を使います）。使用電圧は {VOLTAGE_PATTERN_TEXT} のいずれかです。名称だけの貼り付けも可能です（番号は自動）。
         </p>
         <div className="row">
           <label>
@@ -41,8 +43,12 @@ export function PasteDialog({
             </select>
           </label>
           <label>
-            既定の使用電圧[V]（105/210 のように書くと大きい方）
-            <input value={volt} inputMode="decimal" className={voltOk ? '' : 'invalid'} onChange={(e) => setVolt(e.target.value)} />
+            既定の使用電圧[V]
+            <select value={volt} onChange={(e) => setVolt(e.target.value)}>
+              {VOLTAGE_PATTERNS.map((p) => (
+                <option key={p.value}>{p.value}</option>
+              ))}
+            </select>
           </label>
         </div>
         <textarea
@@ -99,7 +105,7 @@ export function PasteDialog({
           <span className="muted small">薄い文字 = 既定値を使った項目</span>
           <div className="spacer" />
           <button onClick={onClose}>閉じる</button>
-          <button className="primary" disabled={result.circuits.length === 0 || !voltOk} onClick={() => onApply(result.circuits)}>
+          <button className="primary" disabled={result.circuits.length === 0} onClick={() => onApply(result.circuits)}>
             {result.circuits.length}件を報告書に追加
           </button>
         </div>

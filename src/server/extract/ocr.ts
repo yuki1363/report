@@ -87,6 +87,7 @@ export function parseOcrText(texts: string[]): Extraction {
     if (!m) continue;
     let rest = m[2]!;
     const system = normalizeSystem(rest);
+    const voltText = /(\d{2,3}(?:\/\d{2,3})?)\s*V/i.exec(rest)?.[1] ?? null;
     const volts = [...rest.matchAll(/(\d{3})\s*\/?\s*(\d{3})?\s*V/gi)].flatMap((x) => [x[1], x[2]]).filter(Boolean).map(Number);
     const at = /(\d{1,4})\s*A(?:T)?\b/i.exec(rest.replace(/(\d+)\s*AF/gi, ''));
     rest = rest
@@ -100,6 +101,7 @@ export function parseOcrText(texts: string[]): Extraction {
       name: rest || null,
       system,
       useVoltage: volts.length ? Math.max(...volts) : null,
+      voltageText: voltText,
       breakerA: at ? Number(at[1]) : null,
     };
     const i = panel.circuits.length;

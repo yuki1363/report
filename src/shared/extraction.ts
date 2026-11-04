@@ -11,6 +11,8 @@ export const ExtractedCircuitSchema = z.object({
   name: z.string().nullable(),
   system: WiringSystemSchema.nullable(),
   useVoltage: z.number().nullable(),
+  /** 電圧の表記（資料に書かれたまま。例: "105/210V"）。「105/210」の判別に使う */
+  voltageText: z.string().nullable().optional(),
   breakerA: z.number().nullable(),
 });
 export type ExtractedCircuit = z.infer<typeof ExtractedCircuitSchema>;

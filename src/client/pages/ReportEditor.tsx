@@ -3,7 +3,8 @@ import type { CircuitComparison, PreviousComparison } from '../../domain/compare
 import { autoGroundVoltage, DEFAULT_USE_VOLTAGE } from '../../domain/groundVoltage.ts';
 import { defaultTestVoltage } from '../../domain/importing.ts';
 import { newCircuit } from '../../domain/newCircuit.ts';
-import { parseVoltage, voltageLabel } from '../../domain/system.ts';
+import { parseVoltage } from '../../domain/system.ts';
+import { patternFor, patternOf, VOLTAGE_PATTERNS, type VoltagePattern } from '../../domain/voltagePattern.ts';
 import { isLowVoltage, LOW_VOLTAGE_MAX_V } from '../../domain/judgment.ts';
 import { judgeCircuit, VERDICT_LABEL, type Verdict } from '../../domain/judgment.ts';
 import { formatReading, parseReading } from '../../domain/reading.ts';
@@ -320,7 +321,7 @@ export function ReportEditor({ id }: { id: string }) {
       {pasting && (
         <PasteDialog
           defaultSystem={report.circuits.at(-1)?.system ?? '1φ3W'}
-          defaultVoltage={report.circuits.at(-1)?.voltageLabel ?? String(report.circuits.at(-1)?.useVoltage ?? 200)}
+          defaultVoltage={(() => { const l = report.circuits.at(-1); return (l && patternOf(l.useVoltage, l.voltageLabel)?.value) || '210'; })()}
           onClose={() => setPasting(false)}
           onApply={(list: PastedCircuit[]) => {
             update((r) => ({
@@ -479,41 +480,35 @@ function NumInput({
 }
 
 /**
- * 使用電圧の入力欄。「210」のほか「105/210」のように書ける（使用電圧は大きい方。帳票には書いた表記を出す）。
- * 打っている途中の文字（「105/」など）は、そのまま表示する。
+ * 使用電圧の選択（105 / 105/210 / 210 / 440）。
+ * 以前の入力など、パターンにない値は「（200V）」として残し、選び直すまでそのまま使う。
  */
-function VoltageInput({
-  shown,
-  onCommit,
+function VoltageSelect({
+  circuit,
+  onPick,
   className,
   ...rest
-}: { shown: string; onCommit: (text: string) => void; className?: string } & Record<string, unknown>) {
-  const [text, setText] = useState(shown);
-  const focused = useRef(false);
-  useEffect(() => {
-    if (!focused.current) setText(shown);
-  }, [shown]);
-  const v = parseVoltage(text);
-  const invalid = text.trim() !== '' && (v === undefined || Number.isNaN(v));
+}: { circuit: Circuit; onPick: (p: VoltagePattern) => void; className?: string } & Record<string, unknown>) {
+  const cur = patternOf(circuit.useVoltage, circuit.voltageLabel);
+  const extra = cur ? undefined : (circuit.voltageLabel ?? String(circuit.useVoltage));
   return (
-    <input
+    <select
       {...rest}
-      className={`${className ?? ''} ${invalid ? 'invalid' : ''}`}
-      value={text}
-      title="例: 200 ／ 105/210（使用電圧は大きい方の 210V）"
-      onFocus={(e) => {
-        focused.current = true;
-        e.target.select();
-      }}
-      onBlur={() => {
-        focused.current = false;
-        setText(shown);
-      }}
+      className={className}
+      value={cur?.value ?? extra}
+      title="使用電圧（105/210 は単相3線。判定には大きい方の 210V を使います）"
       onChange={(e) => {
-        setText(e.target.value);
-        onCommit(e.target.value);
+        const p = patternFor(e.target.value);
+        if (p) onPick(p);
       }}
-    />
+    >
+      {extra !== undefined && <option value={extra}>（{extra}）</option>}
+      {VOLTAGE_PATTERNS.map((p) => (
+        <option key={p.value} value={p.value}>
+          {p.value}
+        </option>
+      ))}
+    </select>
   );
 }
 
@@ -688,19 +683,16 @@ function CircuitGrid({
                   </select>
                 </td>
                 <td>
-                  <VoltageInput
+                  <VoltageSelect
                     className={`volt ${isLowVoltage(c.useVoltage) ? '' : 'invalid'}`}
-                    shown={c.voltageLabel ?? String(c.useVoltage)}
+                    circuit={c}
                     {...cellProps(i, 'useVoltage')}
-                    onCommit={(text) => {
-                      const v = parseVoltage(text);
-                      if (v === undefined || Number.isNaN(v)) return;
-                      const label = voltageLabel(text);
+                    onPick={(pat) =>
                       updateCircuit(c.id, (x) => {
                         const { voltageLabel: _l, ...rest } = x;
-                        return { ...rest, ...(label ? { voltageLabel: label } : {}), useVoltage: v, groundVoltage: autoGroundVoltage(x.system, v) };
-                      });
-                    }}
+                        return { ...rest, ...(pat.label ? { voltageLabel: pat.label } : {}), useVoltage: pat.useVoltage, groundVoltage: autoGroundVoltage(x.system, pat.useVoltage) };
+                      })
+                    }
                   />
                 </td>
                 {showVolt && (

@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { DEFAULT_USE_VOLTAGE } from '../../domain/groundVoltage.ts';
 import { LOW_VOLTAGE_MAX_V } from '../../domain/judgment.ts';
-import { parseVoltage, voltageLabel } from '../../domain/system.ts';
+import { parseVoltage } from '../../domain/system.ts';
+import { patternOfText, VOLTAGE_PATTERNS, VOLTAGE_PATTERN_TEXT } from '../../domain/voltagePattern.ts';
 import type { ExtractedCircuit, ImportRecord } from '../../shared/extraction.ts';
 import { WIRING_SYSTEMS, type WiringSystem } from '../../shared/schema.ts';
 import { api } from '../api.ts';
@@ -34,7 +35,8 @@ const toRow = (c: ExtractedCircuit, unc: Row['unc']): Row => ({
   no: c.no ?? '',
   name: c.name ?? '',
   system: c.system ?? '',
-  useVoltage: c.useVoltage === null ? '' : String(c.useVoltage),
+  // 資料の表記が「105/210」などパターンに合えばそれを使う。なければ数値
+  useVoltage: patternOfText(c.voltageText ?? '')?.value ?? (c.useVoltage === null ? '' : String(c.useVoltage)),
   breakerA: c.breakerA === null ? '' : String(c.breakerA),
   unc,
 });
@@ -127,6 +129,7 @@ export function ConfirmPage({ id, auto }: { id: string; auto: boolean }) {
       const v = parseVoltage(r.useVoltage);
       if (v === undefined || Number.isNaN(v) || v <= 0) e.push('使用電圧');
       else if (v > LOW_VOLTAGE_MAX_V) e.push(`使用電圧（低圧は${LOW_VOLTAGE_MAX_V}V以下。高圧の回路は外してください）`);
+      else if (!patternOfText(r.useVoltage)) e.push(`使用電圧（${VOLTAGE_PATTERN_TEXT} から選択）`);
       const b = num(r.breakerA);
       if (b !== undefined && (Number.isNaN(b) || b < 0)) e.push('ブレーカ容量');
       return e;
@@ -174,8 +177,8 @@ export function ConfirmPage({ id, auto }: { id: string; auto: boolean }) {
               no: r.no.trim(),
               name: r.name.trim(),
               system: r.system as WiringSystem,
-              useVoltage: parseVoltage(r.useVoltage)!,
-              ...(voltageLabel(r.useVoltage) ? { voltageLabel: voltageLabel(r.useVoltage)! } : {}),
+              useVoltage: patternOfText(r.useVoltage)!.useVoltage,
+              ...(patternOfText(r.useVoltage)!.label ? { voltageLabel: patternOfText(r.useVoltage)!.label! } : {}),
               ...(b !== undefined ? { breakerA: b } : {}),
             };
           }),
@@ -320,7 +323,12 @@ export function ConfirmPage({ id, auto }: { id: string; auto: boolean }) {
                       </select>
                     </td>
                     <td className={uncCls(r.unc.useVoltage)} title={r.unc.useVoltage}>
-                      <input className="volt" inputMode="decimal" value={r.useVoltage} disabled={confirmed} onChange={(e) => setRow(r.rid, { useVoltage: e.target.value }, 'useVoltage')} />
+                      <select className="volt" value={patternOfText(r.useVoltage)?.value ?? ''} disabled={confirmed} onChange={(e) => setRow(r.rid, { useVoltage: e.target.value }, 'useVoltage')}>
+                        <option value="">{r.useVoltage ? `（${r.useVoltage}）要選択` : '（選択）'}</option>
+                        {VOLTAGE_PATTERNS.map((p) => (
+                          <option key={p.value}>{p.value}</option>
+                        ))}
+                      </select>
                     </td>
                     <td className={uncCls(r.unc.breakerA)} title={r.unc.breakerA}>
                       <input className="volt" inputMode="decimal" value={r.breakerA} disabled={confirmed} onChange={(e) => setRow(r.rid, { breakerA: e.target.value }, 'breakerA')} />

@@ -25,8 +25,8 @@ export function autoGroundVoltage(system: WiringSystem, useVoltage: number): num
 
 /** 電気方式ごとの既定の使用電圧 [V] */
 export const DEFAULT_USE_VOLTAGE: Record<WiringSystem, number> = {
-  '1φ2W': 100,
-  '1φ3W': 200,
-  '3φ3W': 200,
-  '3φ4W': 400,
+  '1φ2W': 105,
+  '1φ3W': 210,
+  '3φ3W': 210,
+  '3φ4W': 440,
 };

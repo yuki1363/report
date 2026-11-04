@@ -8,6 +8,7 @@
  */
 import type { WiringSystem } from '../shared/schema.ts';
 import { LOW_VOLTAGE_MAX_V } from './judgment.ts';
+import { patternOf, VOLTAGE_PATTERN_TEXT } from './voltagePattern.ts';
 import { normalizeSystem, parseVoltage, toHalf, voltageLabel } from './system.ts';
 
 export interface PastedCircuit {
@@ -78,6 +79,8 @@ export function parsePastedCircuits(text: string, defaults: PasteDefaults): Past
     if (system === null) return fail(`電気方式「${sysText}」を判別できません（1φ2W / 1φ3W / 3φ3W / 3φ4W）`);
     if (volt === undefined || Number.isNaN(volt) || volt <= 0) return fail(`使用電圧「${voltText}」が数値ではありません`);
     if (volt > LOW_VOLTAGE_MAX_V) return fail(`使用電圧 ${volt}V は低圧（${LOW_VOLTAGE_MAX_V}V 以下）の範囲外です`);
+    const label = voltText ? voltageLabel(voltText) : defaults.voltageLabel;
+    if (!patternOf(volt, label)) return fail(`電圧「${voltText || defaults.voltageLabel || defaults.useVoltage}」は ${VOLTAGE_PATTERN_TEXT} のいずれかにしてください`);
     if (at !== undefined && (Number.isNaN(at) || at < 0)) return fail(`ブレーカ容量「${cells[4]}」が数値ではありません`);
     result.circuits.push({
       no,
