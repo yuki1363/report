@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.env
+data/
+samples/
+*.log
+release/
+.cache/
+src/client/public/pdfjs/
