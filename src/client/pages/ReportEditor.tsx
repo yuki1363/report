@@ -5,21 +5,15 @@ import { newCircuit } from '../../domain/newCircuit.ts';
 import { parseVoltage } from '../../domain/system.ts';
 import { applyFreeVoltage, applySystem, patternOf, VOLTAGE_PATTERNS, voltageText } from '../../domain/voltagePattern.ts';
 import { isLowVoltage, LOW_VOLTAGE_MAX_V } from '../../domain/judgment.ts';
-import { judgeCircuit, VERDICT_LABEL, type Verdict } from '../../domain/judgment.ts';
-import { formatReading, parseReading } from '../../domain/reading.ts';
 import {
-  READING_KEYS,
-  READING_LABELS,
   TEST_VOLTAGES,
   SELECTABLE_SYSTEMS,
   type Circuit,
-  type ReadingKey,
   type Report,
   type Sheet,
   type WiringSystem,
 } from '../../shared/schema.ts';
 import { api, type TemplateSummary } from '../api.ts';
-import { MeggerDialog } from '../MeggerDialog.tsx';
 import { DEVICE_TYPES } from '../../domain/deviceTypes.ts';
 import { ComboInput } from '../ComboInput.tsx';
 import { PasteDialog } from '../PasteDialog.tsx';
@@ -43,13 +37,10 @@ export function ReportEditor({ id }: { id: string }) {
   const [tab, setTab] = useState<'input' | 'format' | 'preview'>('input');
   const [previewKey, setPreviewKey] = useState(0);
   const [templates, setTemplates] = useState<TemplateSummary[]>([]);
-  const [aiEnabled, setAiEnabled] = useState(false);
   const [outBusy, setOutBusy] = useState('');
   const [formatSheet, setFormatSheet] = useState<{ sheet: Sheet; key: number } | null>(null);
   const [formatDirty, setFormatDirty] = useState(false);
-  const [megger, setMegger] = useState<{ row: number; key: ReadingKey } | null>(null);
   const [pasting, setPasting] = useState(false);
-  const lastCell = useRef<{ row: number; key: ReadingKey }>({ row: 0, key: 'RE' });
   const saveTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const latest = useRef<Report | null>(null);
   /** 保存は直列に実行する（古い保存が新しい保存を上書きしないように） */
@@ -66,7 +57,6 @@ export function ReportEditor({ id }: { id: string }) {
     api
       .getSettings()
       .then((s) => {
-        setAiEnabled(s.settings.aiExtraction);
       })
       .catch(() => {});
     api.listTemplates().then(setTemplates).catch(() => {});
@@ -190,7 +180,7 @@ export function ReportEditor({ id }: { id: string }) {
         <div className="spacer" />
         <div className="tabs">
           <button className={tab === 'input' ? 'active' : ''} onClick={() => leaveFormat() && setTab('input')}>
-            測定値入力
+            回路入力
           </button>
           <button className={tab === 'format' ? 'active' : ''} onClick={() => tab !== 'format' && openFormat()}>
             書式編集
@@ -279,13 +269,6 @@ export function ReportEditor({ id }: { id: string }) {
             <a className="button" href={`#/import/${report.id}`} onClick={() => void flush()}>
               📄 図面から回路を追加
             </a>
-            <button
-              onClick={() => setMegger({ ...lastCell.current, row: Math.min(lastCell.current.row, Math.max(0, report.circuits.length - 1)) })}
-              disabled={report.circuits.length === 0}
-              title="メガーの表示を撮った写真から測定値を読み取ります（実験的機能）"
-            >
-              📷 メガー写真から入力（実験的）
-            </button>
           </div>
           {report.circuits.some((c) => !isLowVoltage(c.useVoltage)) && (
             <p className="warn">
@@ -299,7 +282,6 @@ export function ReportEditor({ id }: { id: string }) {
             addCircuit={addCircuit}
             removeCircuit={removeCircuit}
             moveCircuit={moveCircuit}
-            onCellFocus={(row, key) => (lastCell.current = { row, key })}
           />
         </>
       )}
@@ -329,19 +311,6 @@ export function ReportEditor({ id }: { id: string }) {
               ],
             }));
             setPasting(false);
-          }}
-        />
-      )}
-      {megger && (
-        <MeggerDialog
-          circuits={report.circuits}
-          initialRow={megger.row}
-          initialKey={megger.key}
-          aiEnabled={aiEnabled}
-          onClose={() => setMegger(null)}
-          onApply={(cid, key, reading) => {
-            updateCircuit(cid, (x) => ({ ...x, readings: { ...x.readings, [key]: reading } }));
-            setMegger(null);
           }}
         />
       )}
@@ -520,46 +489,8 @@ function VoltageInput({
   );
 }
 
-function ReadingInput({
-  value,
-  onChange,
-  ...rest
-}: {
-  value: Circuit['readings'][ReadingKey];
-  onChange: (v: Circuit['readings'][ReadingKey]) => void;
-} & Record<string, unknown>) {
-  const [text, setText] = useState(formatReading(value));
-  const focused = useRef(false);
-  useEffect(() => {
-    if (!focused.current) setText(formatReading(value));
-  }, [value]);
-  const invalid = parseReading(text) === null;
-  return (
-    <input
-      {...rest}
-      className={`reading ${invalid ? 'invalid' : ''}`}
-      value={text}
-      title="数値 / >2000（上限超過）/ -（測定対象外）"
-      onFocus={(e) => {
-        focused.current = true;
-        e.target.select();
-      }}
-      onBlur={() => {
-        focused.current = false;
-        setText(formatReading(value));
-      }}
-      onChange={(e) => {
-        setText(e.target.value);
-        const p = parseReading(e.target.value);
-        if (p !== null) onChange(p);
-      }}
-    />
-  );
-}
-
-// ---------------------------------------------------------------------------
-
-const COLS = ['no', 'name', 'deviceType', 'breakerA', 'system', 'useVoltage', 'groundVoltage', 'testVoltage', ...READING_KEYS, 'note'] as const;
+/** 入力する項目（左から）。測定値は入力しない（帳票の空欄に、手書きで記入する） */
+const COLS = ['no', 'name', 'deviceType', 'breakerA', 'system', 'useVoltage'] as const;
 
 function CircuitGrid({
   circuits,
@@ -567,18 +498,14 @@ function CircuitGrid({
   addCircuit,
   removeCircuit,
   moveCircuit,
-  onCellFocus,
 }: {
   circuits: Circuit[];
   updateCircuit: (id: string, fn: (c: Circuit) => Circuit) => void;
   addCircuit: (afterIndex?: number) => void;
   removeCircuit: (id: string) => void;
   moveCircuit: (index: number, delta: number) => void;
-  onCellFocus: (row: number, key: ReadingKey) => void;
 }) {
   const gridRef = useRef<HTMLTableElement>(null);
-  /** 対地電圧・測定電圧は帳票に載せないため既定では隠す（対地電圧は判定の基準値に内部で使う） */
-  const [showVolt, setShowVolt] = useState(false);
   const pendingFocus = useRef<{ row: number; col: number } | null>(null);
 
   const focusCell = (row: number, col: number) => {
@@ -630,192 +557,105 @@ function CircuitGrid({
 
   return (
     <div className="grid-wrap">
-      <table
-        className="grid"
-        ref={gridRef}
-        onFocusCapture={(e) => {
-          const t = e.target as HTMLElement;
-          const row = Number(t.dataset.row);
-          const col = COLS[Number(t.dataset.col)];
-          if (!Number.isNaN(row) && col && (READING_KEYS as readonly string[]).includes(col)) onCellFocus(row, col as ReadingKey);
-        }}
-      >
+      <table className="grid" ref={gridRef}>
         <thead>
           <tr>
-            <th rowSpan={2} className="sticky-left" title="左の × で、その行の回路を削除します"></th>
-            <th rowSpan={2}>No</th>
-            <th rowSpan={2}>回路名称</th>
-            <th rowSpan={2} title="ELB・MCB・Mg など（自由に書けます）">種別</th>
-            <th rowSpan={2}>容量[A]</th>
-            <th rowSpan={2}>電気方式</th>
-            <th rowSpan={2}>使用電圧[V]</th>
-            {showVolt && <th rowSpan={2} title="判定の基準値（0.1 / 0.2 MΩ）の決定に使います">対地電圧[V]</th>}
-            {showVolt && <th rowSpan={2}>測定電圧[V]</th>}
-            <th colSpan={READING_KEYS.length}>絶縁抵抗値 [MΩ]</th>
-            <th rowSpan={2}>基準値</th>
-            <th rowSpan={2}>判定</th>
-            <th rowSpan={2}>備考</th>
-            <th rowSpan={2} className="sticky-actions">操作</th>
-          </tr>
-          <tr>
-            {READING_KEYS.map((k) => (
-              <th key={k}>{READING_LABELS[k]}</th>
-            ))}
+            <th className="sticky-left" title="左の × で、その行の回路を削除します"></th>
+            <th>No</th>
+            <th>回路名称</th>
+            <th title="ELB・MCB・Mg など（自由に書けます）">種別</th>
+            <th>容量[A]</th>
+            <th>電気方式</th>
+            <th>使用電圧[V]</th>
+            <th className="sticky-actions">操作</th>
           </tr>
         </thead>
         <tbody>
-          {circuits.map((c, i) => {
-            const j = judgeCircuit(c);
-            const auto = c.system ? autoGroundVoltage(c.system, c.useVoltage) : 0;
-            return (
-              <tr key={c.id}>
-                <td className="sticky-left del-col">
-                  <button
-                    tabIndex={-1}
-                    className="danger del-x"
-                    title="この回路を削除"
-                    aria-label={`回路「${c.no} ${c.name}」を削除`}
-                    onClick={() => confirm(`回路「${c.no} ${c.name}」を削除しますか？`) && removeCircuit(c.id)}
-                  >
-                    ×
-                  </button>
-                </td>
-                <td>
-                  <input className="no" value={c.no} {...cellProps(i, 'no')} onChange={(e) => updateCircuit(c.id, (x) => ({ ...x, no: e.target.value }))} />
-                </td>
-                <td>
-                  <input className="name" value={c.name} {...cellProps(i, 'name')} onChange={(e) => updateCircuit(c.id, (x) => ({ ...x, name: e.target.value }))} />
-                </td>
-                <td>
-                  <ComboInput
-                    className="dev"
-                    value={c.deviceType ?? ''}
-                    options={DEVICE_TYPES}
-                    {...cellProps(i, 'deviceType')}
-                    onChange={(text) =>
-                      updateCircuit(c.id, (x) => {
-                        const { deviceType: _d, ...rest } = x;
-                        return text ? { ...rest, deviceType: text } : rest;
-                      })
-                    }
-                  />
-                </td>
-                <td>
-                  <NumInput
-                    className="volt"
-                    value={c.breakerA}
-                    {...cellProps(i, 'breakerA')}
-                    onChange={(v) =>
-                      updateCircuit(c.id, (x) => {
-                        const { breakerA: _b, ...rest } = x;
-                        return v === undefined ? rest : { ...rest, breakerA: v };
-                      })
-                    }
-                  />
-                </td>
-                <td>
-                  <select
-                    value={c.system}
-                    {...cellProps(i, 'system')}
-                    onChange={(e) => updateCircuit(c.id, (x) => applySystem(x, e.target.value as WiringSystem | ''))}
-                  >
-                    <option value="">（空欄）</option>
-                    {c.system === '3φ4W' && <option>3φ4W</option>}
-                    {SELECTABLE_SYSTEMS.map((s) => (
-                      <option key={s}>{s}</option>
-                    ))}
-                  </select>
-                </td>
-                <td>
-                  <VoltageInput
-                    className={`volt ${isLowVoltage(c.useVoltage) ? '' : 'invalid'}`}
-                    circuit={c}
-                    {...cellProps(i, 'useVoltage')}
-                    onCommit={(text) => updateCircuit(c.id, (x) => applyFreeVoltage(x, text))}
-                  />
-                </td>
-                {showVolt && (
-                  <>
-                <td>
-                  <NumInput
-                    className={`volt ${c.groundVoltage !== auto ? 'manual' : ''}`}
-                    value={c.groundVoltage}
-                    title={c.groundVoltage !== auto ? `手動上書き（自動算出値: ${auto}V）` : '電気方式と使用電圧から自動算出'}
-                    {...cellProps(i, 'groundVoltage')}
-                    onChange={(v) => updateCircuit(c.id, (x) => ({ ...x, groundVoltage: v ?? 0 }))}
-                  />
-                </td>
-                <td>
-                  <select
-                    value={c.testVoltage}
-                    {...cellProps(i, 'testVoltage')}
-                    onChange={(e) => updateCircuit(c.id, (x) => ({ ...x, testVoltage: Number(e.target.value) as Circuit['testVoltage'] }))}
-                  >
-                    {TEST_VOLTAGES.map((v) => (
-                      <option key={v} value={v}>
-                        {v}
-                      </option>
-                    ))}
-                  </select>
-                </td>
-                  </>
-                )}
-                {READING_KEYS.map((k) => (
-                  <td key={k}>
-                    <ReadingInput
-                      value={c.readings[k]}
-                      {...cellProps(i, k)}
-                      onChange={(v) =>
-                        updateCircuit(c.id, (x) => {
-                          const readings = { ...x.readings };
-                          if (v === undefined) delete readings[k];
-                          else readings[k] = v;
-                          return { ...x, readings };
-                        })
-                      }
-                    />
-                  </td>
-                ))}
-                <td className="num" title={j.criterion.label}>
-                  {j.criterion.mohm}
-                </td>
-                <td>
-                  <VerdictBadge v={j.verdict} />
-                </td>
-                <td>
-                  <input className="note" value={c.note ?? ''} {...cellProps(i, 'note')} onChange={(e) => updateCircuit(c.id, (x) => ({ ...x, note: e.target.value }))} />
-                </td>
-                <td className="row-actions sticky-actions">
-                  <button tabIndex={-1} title="上へ" onClick={() => moveCircuit(i, -1)}>
-                    ↑
-                  </button>
-                  <button tabIndex={-1} title="下へ" onClick={() => moveCircuit(i, 1)}>
-                    ↓
-                  </button>
-                  <button tabIndex={-1} title="この下に行を挿入" onClick={() => addCircuit(i)}>
-                    ＋
-                  </button>
-                </td>
-              </tr>
-            );
-          })}
+          {circuits.map((c, i) => (
+            <tr key={c.id}>
+              <td className="sticky-left del-col">
+                <button
+                  tabIndex={-1}
+                  className="danger del-x"
+                  title="この回路を削除"
+                  aria-label={`回路「${c.no} ${c.name}」を削除`}
+                  onClick={() => confirm(`回路「${c.no} ${c.name}」を削除しますか？`) && removeCircuit(c.id)}
+                >
+                  ×
+                </button>
+              </td>
+              <td>
+                <input className="no" value={c.no} {...cellProps(i, 'no')} onChange={(e) => updateCircuit(c.id, (x) => ({ ...x, no: e.target.value }))} />
+              </td>
+              <td>
+                <input className="name" value={c.name} {...cellProps(i, 'name')} onChange={(e) => updateCircuit(c.id, (x) => ({ ...x, name: e.target.value }))} />
+              </td>
+              <td>
+                <ComboInput
+                  className="dev"
+                  value={c.deviceType ?? ''}
+                  options={DEVICE_TYPES}
+                  {...cellProps(i, 'deviceType')}
+                  onChange={(text) =>
+                    updateCircuit(c.id, (x) => {
+                      const { deviceType: _d, ...rest } = x;
+                      return text ? { ...rest, deviceType: text } : rest;
+                    })
+                  }
+                />
+              </td>
+              <td>
+                <NumInput
+                  className="volt"
+                  value={c.breakerA}
+                  {...cellProps(i, 'breakerA')}
+                  onChange={(v) =>
+                    updateCircuit(c.id, (x) => {
+                      const { breakerA: _b, ...rest } = x;
+                      return v === undefined ? rest : { ...rest, breakerA: v };
+                    })
+                  }
+                />
+              </td>
+              <td>
+                <select value={c.system} {...cellProps(i, 'system')} onChange={(e) => updateCircuit(c.id, (x) => applySystem(x, e.target.value as WiringSystem | ''))}>
+                  <option value="">（空欄）</option>
+                  {c.system === '3φ4W' && <option>3φ4W</option>}
+                  {SELECTABLE_SYSTEMS.map((s) => (
+                    <option key={s}>{s}</option>
+                  ))}
+                </select>
+              </td>
+              <td>
+                <VoltageInput
+                  className={`volt ${isLowVoltage(c.useVoltage) ? '' : 'invalid'}`}
+                  circuit={c}
+                  {...cellProps(i, 'useVoltage')}
+                  onCommit={(text) => updateCircuit(c.id, (x) => applyFreeVoltage(x, text))}
+                />
+              </td>
+              <td className="row-actions sticky-actions">
+                <button tabIndex={-1} title="上へ" onClick={() => moveCircuit(i, -1)}>
+                  ↑
+                </button>
+                <button tabIndex={-1} title="下へ" onClick={() => moveCircuit(i, 1)}>
+                  ↓
+                </button>
+                <button tabIndex={-1} title="この下に行を挿入" onClick={() => addCircuit(i)}>
+                  ＋
+                </button>
+              </td>
+            </tr>
+          ))}
         </tbody>
       </table>
       <div className="grid-footer">
         <button onClick={() => addCircuit()}>＋ 回路を追加</button>
-        <label className="check inline-check" title="帳票には載りません。判定の基準値（0.1 / 0.2 MΩ）は、電気方式と使用電圧から自動で決まります">
-          <input type="checkbox" checked={showVolt} onChange={(e) => setShowVolt(e.target.checked)} /> 対地電圧・測定電圧を表示（通常は不要）
-        </label>
         <span className="muted">
-          入力: 数値 ／ 「&gt;2000」= 上限超過 ／ 「-」= 測定対象外。Enter・↑↓ で上下移動、最終行で Enter → 行追加。
-          
+          Enter・↑↓ で上下に移動、最終行で Enter → 行を追加。使用電圧は自由に書けます（候補: 105 / 105/210 / 210 / 440）。
+          測定値は入力しません（帳票の空欄に、印刷してから記入します）。
         </span>
       </div>
     </div>
   );
-}
-
-function VerdictBadge({ v }: { v: Verdict }) {
-  if (v === 'none') return null; // 判定していない回路は空欄
-  return <span className={`verdict v-${v}`}>{VERDICT_LABEL[v]}</span>;
 }

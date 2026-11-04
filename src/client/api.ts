@@ -57,13 +57,6 @@ export interface TemplateSummary {
   builtin: boolean;
 }
 
-export interface MeggerReading {
-  kind: 'value' | 'over' | 'unreadable';
-  mohm: number | null;
-  displayText: string | null;
-  reason: string | null;
-}
-
 export const api = {
   listReports: () => call<ReportSummary[]>('/api/reports'),
   createReport: (from?: string, mode?: 'copy' | 'inherit') =>
@@ -93,7 +86,6 @@ export const api = {
   extract: (id: string) => call<ImportRecord>(`/api/imports/${id}/extract`, { method: 'POST', body: '{}' }),
   confirmImport: (id: string, body: ConfirmBody) =>
     call<{ reports: Report[] }>(`/api/imports/${id}/confirm`, { method: 'POST', body: JSON.stringify(body) }),
-  readMegger: (fd: FormData) => upload<MeggerReading>('/api/megger', fd),
 
   getSettings: () => call<SettingsResponse>('/api/settings'),
   saveSettings: (s: Settings) => call<Settings>('/api/settings', { method: 'PUT', body: JSON.stringify(s) }),

@@ -36,7 +36,6 @@ const app = createApp({
       calls.push(`ocr:${pages.length}`);
       return { panels: [{ name: null, location: null, circuits: [] }], uncertain: [] };
     },
-    megger: async () => ({ kind: 'value', mohm: 52.3, displayText: '52.3MΩ', reason: null }),
   },
 });
 afterAll(() => {
@@ -129,13 +128,6 @@ describe('取込 → 読み取り → 確認・確定', () => {
       mode: 'new', applyPanel: true, panels: [{ panel: { name: 'x', location: '' }, circuits: [{ no: '1', name: 'a', useVoltage: 100 }] }],
     });
     expect(res.status).toBe(400);
-  });
-
-  it('メガー写真の読み取り（AI ON のとき）', async () => {
-    const fd = new FormData();
-    fd.append('image', new File([PNG], 'm.png', { type: 'image/png' }));
-    const res = await app.request(base + '/api/megger', { method: 'POST', body: fd, headers: { ...H, 'x-report-app': '1' } });
-    expect(await res.json()).toMatchObject({ kind: 'value', mohm: 52.3 });
   });
 });
 

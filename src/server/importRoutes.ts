@@ -8,7 +8,7 @@ import { z } from 'zod';
 import { applyConfirmation } from '../domain/importing.ts';
 import { ConfirmBodySchema, ImportPageSchema, type Extraction, type ImportPage, type ImportRecord } from '../shared/extraction.ts';
 import type { Store } from './db.ts';
-import { ExtractionError, extractWithClaude, readMeggerPhoto, type MeggerReading } from './extract/claude.ts';
+import { ExtractionError, extractWithClaude } from './extract/claude.ts';
 import { ocrImages, parseOcrText, textLayerToLines } from './extract/ocr.ts';
 import { newReport } from './reportFactory.ts';
 
@@ -16,7 +16,6 @@ export interface Extractors {
   ai: (dataDir: string, importId: string, pages: ImportPage[]) => Promise<{ result: Extraction; model: string }>;
   /** オフライン読み取り: テキスト PDF はテキスト層、それ以外は OCR */
   ocr: (dataDir: string, importId: string, pages: ImportPage[]) => Promise<Extraction>;
-  megger: (image: Buffer, mediaType: 'image/png' | 'image/jpeg') => Promise<MeggerReading>;
 }
 
 export const defaultExtractors: Extractors = {
@@ -28,7 +27,6 @@ export const defaultExtractors: Extractors = {
     scan.forEach((i, k) => (texts[i] = ocr[k]!));
     return parseOcrText(texts);
   },
-  megger: readMeggerPhoto,
 };
 
 const MAX_FILE_BYTES = 50 * 1024 * 1024;
@@ -159,21 +157,5 @@ export function registerImportRoutes(app: Hono, store: Store, dataDir: string, e
     }
     store.saveImport({ ...rec, status: 'confirmed', confirmedReportId: reports[0]!.id });
     return c.json({ reports });
-  });
-
-  /** P4（実験的）: メガー表示写真の読み取り。外部 AI 読み取りが ON のときだけ使える。 */
-  app.post('/api/megger', async (c) => {
-    if (!store.getSettings().aiExtraction) {
-      return c.json({ error: '外部 AI 読み取りが OFF です（設定画面で ON にすると使えます）' }, 409);
-    }
-    const body = await c.req.parseBody();
-    const f = body['image'];
-    if (!(f instanceof File) || !PAGE_TYPES[f.type]) return c.json({ error: 'PNG または JPEG の画像を指定してください' }, 400);
-    if (f.size > 10 * 1024 * 1024) return c.json({ error: '画像が大きすぎます（上限 10MB）' }, 413);
-    try {
-      return c.json(await ex.megger(Buffer.from(await f.arrayBuffer()), f.type as 'image/png' | 'image/jpeg'));
-    } catch (e) {
-      return c.json({ error: (e as Error).message }, 502);
-    }
   });
 }

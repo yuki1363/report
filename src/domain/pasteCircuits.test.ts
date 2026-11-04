@@ -32,6 +32,10 @@ describe('回路の貼り付け（回路No / 回路名称 / 種別 / 容量 / �
     const r = parsePastedCircuits('照明 1F\nコンセント\n', { voltage: '105/210' });
     expect(r.circuits.map((c) => `${c.no}${c.name}:${c.system}:${c.voltageLabel}`)).toEqual(['1照明 1F:1φ3W:105/210', '2コンセント:1φ3W:105/210']);
   });
+  it('数字だけの行は回路No（名称は空欄）。文字の行は名称で、番号は自動', () => {
+    const r = parsePastedCircuits('72\n73-1\n動力\n', { voltage: '210' });
+    expect(r.circuits.map((c) => `${c.no}|${c.name}`)).toEqual(['72|', '73-1|', '3|動力']);
+  });
   it('2つ以上の空白区切りも使える（名称の中の1つの空白は区切りにしない）', () => {
     const r = parsePastedCircuits('1  照明 1F  ELB  20  1φ3W  105/210', d);
     expect(r.circuits[0]).toMatchObject({ no: '1', name: '照明 1F', deviceType: 'ELB', breakerA: 20, system: '1φ3W', useVoltage: 210, voltageLabel: '105/210' });

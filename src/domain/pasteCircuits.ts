@@ -73,7 +73,10 @@ export function parsePastedCircuits(text: string, defaults: PasteDefaults): Past
     }
     const fail = (reason: string) => result.errors.push({ line: idx + 1, text: raw.trim(), reason });
     // 回路名称の1列だけが貼られた場合（番号なし）は、番号を自動で振る
-    const onlyName = cells.length === 1;
+    // ただし、数字だけの行（例: 72）は回路No として扱い、名称は空欄にする
+    const onlyOne = cells.length === 1;
+    const onlyNo = onlyOne && /^\d+(-\d+)?$/.test(cells[0] ?? '');
+    const onlyName = onlyOne && !onlyNo;
     const no = onlyName ? String(result.circuits.length + 1) : (cells[0] ?? '');
     const name = onlyName ? (cells[0] ?? '') : (cells[1] ?? '');
     if (!name && !no) return fail('回路No・回路名称が空です');
