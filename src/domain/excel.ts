@@ -1,5 +1,5 @@
 /**
- * Sheet（展開済み）→ Excel（ExcelJS）。CLAUDE.md §5, §6。
+ * Sheet（展開済み）→ Excel（ExcelJS）。CLAUDE.md §5, §6。サーバーとブラウザの両方で使う。
  * - 数式は使わず、判定結果も値として書き込む
  * - 用紙・余白・印刷範囲・繰り返し見出し行（printTitlesRow）を設定する
  * - 行高: pt = mm × 72 / 25.4
@@ -8,8 +8,8 @@
  */
 import ExcelJS from 'exceljs';
 import type { BorderStyle, Cell, Sheet } from '../shared/schema.ts';
-import { DEFAULT_FONT_PT } from '../domain/renderHtml.ts';
-import { parseKey } from '../domain/generate.ts';
+import { DEFAULT_FONT_PT } from './renderHtml.ts';
+import { parseKey } from './generate.ts';
 
 /** Excel の既定フォント（PDF の第1候補と同じ。Windows 10 以降に標準搭載） */
 export const EXCEL_FONT = 'BIZ UDゴシック';
@@ -47,7 +47,7 @@ export interface XlsxOptions {
   title?: string;
 }
 
-export async function sheetToXlsx(sheet: Sheet, opts: XlsxOptions): Promise<Buffer> {
+export async function sheetToXlsx(sheet: Sheet, opts: XlsxOptions): Promise<Uint8Array> {
   const wb = new ExcelJS.Workbook();
   wb.creator = '絶縁抵抗測定報告書アプリ';
   const name = (opts.title || '報告書').replace(/[\\/?*[\]:]/g, '_').slice(0, 31) || '報告書';
@@ -136,5 +136,6 @@ export async function sheetToXlsx(sheet: Sheet, opts: XlsxOptions): Promise<Buff
     }
   }
 
-  return Buffer.from(await wb.xlsx.writeBuffer());
+  // Buffer を使わない（ブラウザでも動かすため）
+  return new Uint8Array(await wb.xlsx.writeBuffer());
 }

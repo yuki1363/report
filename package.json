@@ -14,7 +14,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
     "gen:template": "tsx scripts/build-default-template.ts",
-    "package:win": "node scripts/package-win.mjs"
+    "package:win": "node scripts/package-win.mjs",
+    "build:format": "vite build -c vite.format.config.ts && node scripts/rename-format.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.4.0",
@@ -44,6 +45,7 @@
     "esbuild": "^0.28.2",
     "typescript": "^7.0.2",
     "vite": "^8.3.5",
+    "vite-plugin-singlefile": "^2.3.4",
     "vitest": "^5.1.0"
   }
 }

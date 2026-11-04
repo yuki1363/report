@@ -37,9 +37,13 @@ interface Props {
   /** 編集中の書式の説明（例: 「この報告書だけの書式」） */
   subtitle?: string;
   onDirtyChange?: (dirty: boolean) => void;
+  /** プレビューの HTML を作る関数（省略時はサーバーに依頼する。単体版ではブラウザ内で作る） */
+  renderPreview?: (sheet: Sheet, report: Report) => Promise<string>;
+  /** 保存済みの状態を渡すと、それとの差を「未保存」として扱う */
+  hideSubtitleDirty?: boolean;
 }
 
-export function SheetEditor({ initial, previewReport, actions, subtitle, onDirtyChange }: Props) {
+export function SheetEditor({ initial, previewReport, actions, subtitle, onDirtyChange, renderPreview, hideSubtitleDirty }: Props) {
   const [sheet, setSheet] = useState<Sheet>(initial);
   const [past, setPast] = useState<Sheet[]>([]);
   const [future, setFuture] = useState<Sheet[]>([]);
@@ -251,7 +255,7 @@ export function SheetEditor({ initial, previewReport, actions, subtitle, onDirty
   const showPreview = async () => {
     setBusy(true);
     try {
-      setPreview(await api.renderHtml(sheet, previewReport));
+      setPreview(await (renderPreview ?? api.renderHtml)(sheet, previewReport));
     } catch (e) {
       setMessage((e as Error).message);
     } finally {
@@ -314,7 +318,7 @@ export function SheetEditor({ initial, previewReport, actions, subtitle, onDirty
     <div className="sheet-editor">
       <div className="toolbar editor-actions">
         {subtitle && <span className="muted">{subtitle}</span>}
-        {dirty && <span className="save save-dirty">未保存の変更あり</span>}
+        {dirty && !hideSubtitleDirty && <span className="save save-dirty">未保存の変更あり</span>}
         <div className="spacer" />
         <button onClick={undo} disabled={!past.length} title="元に戻す（Ctrl+Z）">↶ 元に戻す</button>
         <button onClick={redo} disabled={!future.length} title="やり直し（Ctrl+Y）">↷ やり直し</button>

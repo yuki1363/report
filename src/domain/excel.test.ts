@@ -1,9 +1,9 @@
 import ExcelJS from 'exceljs';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { generateSheet } from '../domain/generate.ts';
+import { generateSheet } from './generate.ts';
 import { TemplateSchema } from '../shared/schema.ts';
-import { sampleReport } from './testFixtures.ts';
+import { sampleReport } from '../server/testFixtures.ts';
 import { colName, mmToExcelWidth, mmToPt, sheetToXlsx } from './excel.ts';
 
 const template = TemplateSchema.parse(JSON.parse(readFileSync(new URL('../../templates/default.json', import.meta.url), 'utf8')));

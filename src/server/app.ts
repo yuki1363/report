@@ -18,7 +18,7 @@ import {
   type Template,
 } from '../shared/schema.ts';
 import type { Store } from './db.ts';
-import { sheetToXlsx } from './excel.ts';
+import { sheetToXlsx } from '../domain/excel.ts';
 import { defaultExtractors, registerImportRoutes, type Extractors } from './importRoutes.ts';
 import { htmlToPdf, PdfBrowserError } from './pdf.ts';
 import { claudeModel } from './extract/claude.ts';
