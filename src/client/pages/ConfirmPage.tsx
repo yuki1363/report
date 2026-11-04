@@ -61,6 +61,13 @@ export function ConfirmPage({ id, auto }: { id: string; auto: boolean }) {
   const [running, setRunning] = useState(false);
   const [panels, setPanels] = useState<PanelState[]>([]);
   const [cur, setCur] = useState(0);
+  /** 選択した回路（まとめて削除用）。盤を切り替えたら解除する */
+  const [pickedRows, setPickedRows] = useState<Set<number>>(new Set());
+  const lastPickedRow = useRef<number | null>(null);
+  useEffect(() => {
+    setPickedRows(new Set());
+    lastPickedRow.current = null;
+  }, [cur]);
   const [mode, setMode] = useState<'new' | 'append' | 'replace'>('new');
   const [applyPanel, setApplyPanel] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -307,7 +314,19 @@ export function ConfirmPage({ id, auto }: { id: string; auto: boolean }) {
             <table className="grid confirm-grid">
               <thead>
                 <tr>
-                  <th className="sticky-left"></th>
+                  <th className="sticky-left" title="チェックした回路を、まとめて削除できます（見出しは全選択）。× はその行だけ削除">
+                    {!confirmed && (
+                      <input
+                        type="checkbox"
+                        checked={rows.length > 0 && rows.every((r) => pickedRows.has(r.rid))}
+                        onChange={(e) => {
+                          setPickedRows(e.target.checked ? new Set(rows.map((r) => r.rid)) : new Set());
+                          lastPickedRow.current = null;
+                        }}
+                        aria-label="すべて選択"
+                      />
+                    )}
+                  </th>
                   <th>No</th>
                   <th>回路名称</th>
                   <th>種別</th>
@@ -319,8 +338,32 @@ export function ConfirmPage({ id, auto }: { id: string; auto: boolean }) {
               </thead>
               <tbody>
                 {rows.map((r, i) => (
-                  <tr key={r.rid} className={rowErrors[i]!.length ? 'row-error' : ''}>
+                  <tr key={r.rid} className={`${rowErrors[i]!.length ? 'row-error' : ''} ${pickedRows.has(r.rid) ? 'picked' : ''}`}>
                     <td className="sticky-left del-col">
+                      {!confirmed && (
+                        <input
+                          type="checkbox"
+                          checked={pickedRows.has(r.rid)}
+                          tabIndex={-1}
+                          aria-label={`${i + 1}行目を選択`}
+                          onClick={(e) => {
+                            const checked = (e.target as HTMLInputElement).checked;
+                            const last = lastPickedRow.current;
+                            const from = e.shiftKey && last !== null ? Math.min(last, i) : i;
+                            const to = e.shiftKey && last !== null ? Math.max(last, i) : i;
+                            setPickedRows((sel) => {
+                              const next = new Set(sel);
+                              for (let k = from; k <= to; k++) {
+                                const rid = rows[k]?.rid;
+                                if (rid !== undefined) (checked ? next.add(rid) : next.delete(rid));
+                              }
+                              return next;
+                            });
+                            lastPickedRow.current = i;
+                          }}
+                          onChange={() => {}}
+                        />
+                      )}
                       {!confirmed && (
                         <button tabIndex={-1} className="danger del-x" title="この回路を削除" onClick={() => setRows((rs) => rs.filter((x) => x.rid !== r.rid))}>
                           ×
@@ -388,6 +431,21 @@ export function ConfirmPage({ id, auto }: { id: string; auto: boolean }) {
             </table>
             {!confirmed && (
               <div className="grid-footer">
+                {pickedRows.size > 0 && (
+                  <>
+                    <button
+                      className="danger"
+                      onClick={() => {
+                        if (!window.confirm(`選択した ${pickedRows.size} 件の回路を削除します。よろしいですか？`)) return;
+                        setRows((rs) => rs.filter((x) => !pickedRows.has(x.rid)));
+                        setPickedRows(new Set());
+                      }}
+                    >
+                      選択した {pickedRows.size} 件を削除
+                    </button>
+                    <button onClick={() => setPickedRows(new Set())}>選択を解除</button>
+                  </>
+                )}
                 <button onClick={() => setRows((rs) => [...rs, toRow({ no: String(rows.length + 1), name: null, system: '1φ3W', useVoltage: DEFAULT_USE_VOLTAGE['1φ3W'], voltageText: '105/210', breakerA: null }, {})])}>
                   ＋ 回路を追加
                 </button>

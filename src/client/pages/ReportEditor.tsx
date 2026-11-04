@@ -121,6 +121,7 @@ export function ReportEditor({ id }: { id: string }) {
     });
 
   const removeCircuit = (cid: string) => update((r) => ({ ...r, circuits: r.circuits.filter((c) => c.id !== cid) }));
+  const removeCircuits = (ids: string[]) => update((r) => ({ ...r, circuits: r.circuits.filter((c) => !ids.includes(c.id)) }));
 
   const moveCircuit = (index: number, delta: number) =>
     update((r) => {
@@ -281,6 +282,7 @@ export function ReportEditor({ id }: { id: string }) {
             updateCircuit={updateCircuit}
             addCircuit={addCircuit}
             removeCircuit={removeCircuit}
+            removeCircuits={removeCircuits}
             moveCircuit={moveCircuit}
           />
         </>
@@ -497,15 +499,46 @@ function CircuitGrid({
   updateCircuit,
   addCircuit,
   removeCircuit,
+  removeCircuits,
   moveCircuit,
 }: {
   circuits: Circuit[];
   updateCircuit: (id: string, fn: (c: Circuit) => Circuit) => void;
   addCircuit: (afterIndex?: number) => void;
   removeCircuit: (id: string) => void;
+  removeCircuits: (ids: string[]) => void;
   moveCircuit: (index: number, delta: number) => void;
 }) {
   const gridRef = useRef<HTMLTableElement>(null);
+  /** 選択した回路（まとめて削除用）。Shift を押しながらクリックすると範囲で選べる */
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const lastPicked = useRef<number | null>(null);
+  // 削除などで無くなった回路は、選択から外す
+  useEffect(() => {
+    setPicked((sel) => (sel.size === 0 || [...sel].every((id) => circuits.some((c) => c.id === id)) ? sel : new Set([...sel].filter((id) => circuits.some((c) => c.id === id)))));
+  }, [circuits]);
+  const pick = (index: number, checked: boolean, range: boolean) => {
+    // 範囲の端は、起点を更新する前に決める（更新関数は後で実行されるため）
+    const last = lastPicked.current;
+    const from = range && last !== null ? Math.min(last, index) : index;
+    const to = range && last !== null ? Math.max(last, index) : index;
+    const ids = circuits.slice(from, to + 1).map((c) => c.id);
+    setPicked((sel) => {
+      const next = new Set(sel);
+      for (const id of ids) (checked ? next.add(id) : next.delete(id));
+      return next;
+    });
+    lastPicked.current = index;
+  };
+  const allPicked = circuits.length > 0 && circuits.every((c) => picked.has(c.id));
+  const deleteSelected = () => {
+    const ids = circuits.filter((c) => picked.has(c.id)).map((c) => c.id);
+    if (ids.length === 0) return;
+    const names = circuits.filter((c) => picked.has(c.id)).slice(0, 5).map((c) => `${c.no} ${c.name}`.trim());
+    if (!confirm(`選択した ${ids.length} 件の回路を削除します。よろしいですか？\n\n${names.join('\n')}${ids.length > 5 ? `\n…ほか ${ids.length - 5} 件` : ''}`)) return;
+    removeCircuits(ids);
+    setPicked(new Set());
+  };
   const pendingFocus = useRef<{ row: number; col: number } | null>(null);
 
   const focusCell = (row: number, col: number) => {
@@ -560,7 +593,17 @@ function CircuitGrid({
       <table className="grid" ref={gridRef}>
         <thead>
           <tr>
-            <th className="sticky-left" title="左の × で、その行の回路を削除します"></th>
+            <th className="sticky-left" title="チェックした回路を、まとめて削除できます（見出しは全選択）。× はその行だけ削除">
+              <input
+                type="checkbox"
+                checked={allPicked}
+                onChange={(e) => {
+                  setPicked(e.target.checked ? new Set(circuits.map((c) => c.id)) : new Set());
+                  lastPicked.current = null;
+                }}
+                aria-label="すべて選択"
+              />
+            </th>
             <th>No</th>
             <th>回路名称</th>
             <th title="ELB・MCB・Mg など（自由に書けます）">種別</th>
@@ -572,8 +615,16 @@ function CircuitGrid({
         </thead>
         <tbody>
           {circuits.map((c, i) => (
-            <tr key={c.id}>
+            <tr key={c.id} className={picked.has(c.id) ? 'picked' : ''}>
               <td className="sticky-left del-col">
+                <input
+                  type="checkbox"
+                  checked={picked.has(c.id)}
+                  tabIndex={-1}
+                  aria-label={`回路「${c.no} ${c.name}」を選択`}
+                  onClick={(e) => pick(i, (e.target as HTMLInputElement).checked, e.shiftKey)}
+                  onChange={() => {}}
+                />
                 <button
                   tabIndex={-1}
                   className="danger del-x"
@@ -651,8 +702,16 @@ function CircuitGrid({
       </table>
       <div className="grid-footer">
         <button onClick={() => addCircuit()}>＋ 回路を追加</button>
+        {picked.size > 0 && (
+          <>
+            <button className="danger" onClick={deleteSelected}>
+              選択した {picked.size} 件を削除
+            </button>
+            <button onClick={() => setPicked(new Set())}>選択を解除</button>
+          </>
+        )}
         <span className="muted">
-          Enter・↑↓ で上下に移動、最終行で Enter → 行を追加。使用電圧は自由に書けます（候補: 105 / 105/210 / 210 / 440）。
+          Enter・↑↓ で上下に移動、最終行で Enter → 行を追加。左のチェックで複数選んでまとめて削除（Shift+クリックで範囲選択）。使用電圧は自由に書けます（候補: 105 / 105/210 / 210 / 440）。
           測定値は入力しません（帳票の空欄に、印刷してから記入します）。
         </span>
       </div>

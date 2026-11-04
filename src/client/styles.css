@@ -213,3 +213,11 @@ table.grid th.sticky-left { background: #f9fafb; z-index: 2; }
 table.grid td.del-col { width: 2em; padding: 0; text-align: center; }
 table.grid td.del-col .del-x { padding: 0 6px; font-size: 14px; line-height: 1.4; border-color: transparent; background: transparent; }
 table.grid td.del-col .del-x:hover { background: #fee2e2; border-color: #fca5a5; }
+
+/* 回路の複数選択（まとめて削除）: 左端のチェックと × */
+table.grid td.del-col { width: auto; white-space: nowrap; padding: 0 4px; }
+table.grid th.sticky-left { padding: 0 6px; }
+table.grid td.del-col input[type=checkbox], table.grid th.sticky-left input[type=checkbox] { vertical-align: middle; margin: 0 2px 0 0; cursor: pointer; }
+table.grid tr.picked td { background: #eff6ff; }
+table.grid tr.picked td.sticky-left { background: #dbeafe; }
+.grid-footer button.danger { border-color: #fca5a5; background: #fef2f2; }
