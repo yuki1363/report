@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react';
-import type { CircuitComparison, PreviousComparison } from '../../domain/compare.ts';
 import { autoGroundVoltage, DEFAULT_USE_VOLTAGE } from '../../domain/groundVoltage.ts';
 import { defaultTestVoltage } from '../../domain/importing.ts';
 import { newCircuit } from '../../domain/newCircuit.ts';
@@ -46,7 +45,6 @@ export function ReportEditor({ id }: { id: string }) {
   const [outBusy, setOutBusy] = useState('');
   const [formatSheet, setFormatSheet] = useState<{ sheet: Sheet; key: number } | null>(null);
   const [formatDirty, setFormatDirty] = useState(false);
-  const [comparison, setComparison] = useState<PreviousComparison | null>(null);
   const [megger, setMegger] = useState<{ row: number; key: ReadingKey } | null>(null);
   const [pasting, setPasting] = useState(false);
   const lastCell = useRef<{ row: number; key: ReadingKey }>({ row: 0, key: 'RE' });
@@ -71,12 +69,6 @@ export function ReportEditor({ id }: { id: string }) {
       .catch(() => {});
     api.listTemplates().then(setTemplates).catch(() => {});
   }, [id]);
-
-  // 前回値との比較（保存のたびに取り直す）
-  useEffect(() => {
-    if (saveState !== 'saved') return;
-    api.previous(id).then(setComparison).catch(() => {});
-  }, [id, saveState]);
 
   const flush = useCallback((): Promise<void> => {
     clearTimeout(saveTimer.current);
@@ -183,7 +175,6 @@ export function ReportEditor({ id }: { id: string }) {
   };
 
   const templateName = templates.find((t) => t.id === report.templateId)?.name ?? report.templateId;
-  const cmpMap = new Map((comparison?.circuits ?? []).map((c) => [c.circuitId, c]));
 
   return (
     <section>
@@ -293,13 +284,6 @@ export function ReportEditor({ id }: { id: string }) {
             >
               📷 メガー写真から入力（実験的）
             </button>
-            {comparison?.previous ? (
-              <span className="muted">
-                前回値: <a href={`#/reports/${comparison.previous.id}`}>{comparison.previous.date} の報告書</a> と比較（最小値が前回の半分未満の回路を赤で表示）
-              </span>
-            ) : (
-              <span className="muted">前回値: 同じ盤名で過去の報告書がありません</span>
-            )}
           </div>
           {report.circuits.some((c) => !isLowVoltage(c.useVoltage)) && (
             <p className="warn">
@@ -313,7 +297,6 @@ export function ReportEditor({ id }: { id: string }) {
             addCircuit={addCircuit}
             removeCircuit={removeCircuit}
             moveCircuit={moveCircuit}
-            comparison={cmpMap}
             onCellFocus={(row, key) => (lastCell.current = { row, key })}
           />
         </>
@@ -562,7 +545,6 @@ function CircuitGrid({
   addCircuit,
   removeCircuit,
   moveCircuit,
-  comparison,
   onCellFocus,
 }: {
   circuits: Circuit[];
@@ -570,7 +552,6 @@ function CircuitGrid({
   addCircuit: (afterIndex?: number) => void;
   removeCircuit: (id: string) => void;
   moveCircuit: (index: number, delta: number) => void;
-  comparison: Map<string, CircuitComparison>;
   onCellFocus: (row: number, key: ReadingKey) => void;
 }) {
   const gridRef = useRef<HTMLTableElement>(null);
@@ -655,7 +636,6 @@ function CircuitGrid({
             <th colSpan={READING_KEYS.length}>絶縁抵抗値 [MΩ]</th>
             <th rowSpan={2}>基準値</th>
             <th rowSpan={2}>判定</th>
-            <th rowSpan={2} title="同じ盤名の前回の報告書の最小値">前回最小</th>
             <th rowSpan={2}>備考</th>
             <th rowSpan={2}></th>
           </tr>
@@ -773,7 +753,6 @@ function CircuitGrid({
                 <td>
                   <VerdictBadge v={j.verdict} />
                 </td>
-                <PrevCell cmp={comparison.get(c.id)} />
                 <td>
                   <input className="note" value={c.note ?? ''} {...cellProps(i, 'note')} onChange={(e) => updateCircuit(c.id, (x) => ({ ...x, note: e.target.value }))} />
                 </td>
@@ -812,17 +791,6 @@ function CircuitGrid({
         </span>
       </div>
     </div>
-  );
-}
-
-function PrevCell({ cmp }: { cmp: CircuitComparison | undefined }) {
-  if (!cmp?.prevMin) return <td className="num muted">-</td>;
-  const pct = cmp.ratio !== undefined ? Math.round(cmp.ratio * 100) : undefined;
-  return (
-    <td className={`num ${cmp.dropped ? 'dropped' : ''}`} title={pct !== undefined ? `前回比 ${pct}%` : undefined}>
-      {formatReading(cmp.prevMin)}
-      {cmp.dropped && <span className="drop-tag"> ↓{pct}%</span>}
-    </td>
   );
 }
 

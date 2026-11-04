@@ -1,5 +1,4 @@
 import type { ConfirmBody, ImportRecord } from '../shared/extraction.ts';
-import type { PreviousComparison } from '../domain/compare.ts';
 import type { Criteria, Report, ReportSummary, Settings, Sheet, Template } from '../shared/schema.ts';
 
 async function parse<T>(res: Response): Promise<T> {
@@ -72,7 +71,6 @@ export const api = {
   getReport: (id: string) => call<Report>(`/api/reports/${id}`),
   saveReport: (r: Report) => call<Report>(`/api/reports/${r.id}`, { method: 'PUT', body: JSON.stringify(r) }),
   deleteReport: (id: string) => call<void>(`/api/reports/${id}`, { method: 'DELETE' }),
-  previous: (id: string) => call<PreviousComparison>(`/api/reports/${id}/previous`),
 
   listTemplates: () => call<TemplateSummary[]>('/api/templates'),
   getTemplate: (id: string) => call<Template & { builtin: boolean }>(`/api/templates/${id}`),
