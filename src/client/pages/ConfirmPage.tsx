@@ -314,7 +314,7 @@ export function ConfirmPage({ id, auto }: { id: string; auto: boolean }) {
             <table className="grid confirm-grid">
               <thead>
                 <tr>
-                  <th className="sticky-left" title="チェックした回路を、まとめて削除できます（見出しは全選択）。× はその行だけ削除">
+                  <th className="sticky-left" title="チェックした回路を、まとめて削除できます（見出しは全選択）">
                     {!confirmed && (
                       <input
                         type="checkbox"
@@ -362,11 +362,6 @@ export function ConfirmPage({ id, auto }: { id: string; auto: boolean }) {
                           }}
                           onChange={() => {}}
                         />
-                      )}
-                      {!confirmed && (
-                        <button tabIndex={-1} className="danger del-x" title="この回路を削除" onClick={() => setRows((rs) => rs.filter((x) => x.rid !== r.rid))}>
-                          ×
-                        </button>
                       )}
                     </td>
                     <td className={uncCls(r.unc.name)} title={r.unc.name}>

@@ -120,7 +120,6 @@ export function ReportEditor({ id }: { id: string }) {
       return { ...r, circuits };
     });
 
-  const removeCircuit = (cid: string) => update((r) => ({ ...r, circuits: r.circuits.filter((c) => c.id !== cid) }));
   const removeCircuits = (ids: string[]) => update((r) => ({ ...r, circuits: r.circuits.filter((c) => !ids.includes(c.id)) }));
 
   const moveCircuit = (index: number, delta: number) =>
@@ -281,7 +280,6 @@ export function ReportEditor({ id }: { id: string }) {
             circuits={report.circuits}
             updateCircuit={updateCircuit}
             addCircuit={addCircuit}
-            removeCircuit={removeCircuit}
             removeCircuits={removeCircuits}
             moveCircuit={moveCircuit}
           />
@@ -498,14 +496,12 @@ function CircuitGrid({
   circuits,
   updateCircuit,
   addCircuit,
-  removeCircuit,
   removeCircuits,
   moveCircuit,
 }: {
   circuits: Circuit[];
   updateCircuit: (id: string, fn: (c: Circuit) => Circuit) => void;
   addCircuit: (afterIndex?: number) => void;
-  removeCircuit: (id: string) => void;
   removeCircuits: (ids: string[]) => void;
   moveCircuit: (index: number, delta: number) => void;
 }) {
@@ -593,7 +589,7 @@ function CircuitGrid({
       <table className="grid" ref={gridRef}>
         <thead>
           <tr>
-            <th className="sticky-left" title="チェックした回路を、まとめて削除できます（見出しは全選択）。× はその行だけ削除">
+            <th className="sticky-left" title="チェックした回路を、まとめて削除できます（見出しは全選択）">
               <input
                 type="checkbox"
                 checked={allPicked}
@@ -624,15 +620,6 @@ function CircuitGrid({
                   onClick={(e) => pick(i, (e.target as HTMLInputElement).checked, e.shiftKey)}
                   onChange={() => {}}
                 />
-                <button
-                  tabIndex={-1}
-                  className="danger del-x"
-                  title="この回路を削除"
-                  aria-label={`回路「${c.name || '名称なし'}」を削除`}
-                  onClick={() => confirm(`回路「${c.name || '（名称なし）'}」を削除しますか？`) && removeCircuit(c.id)}
-                >
-                  ×
-                </button>
               </td>
               <td>
                 <input className="name" value={c.name} {...cellProps(i, 'name')} onChange={(e) => updateCircuit(c.id, (x) => ({ ...x, name: e.target.value }))} />
