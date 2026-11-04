@@ -1,7 +1,8 @@
 /**
  * 貼り付けた表（Excel などからコピーした文字）を回路の一覧にする。純粋関数。
  *
- * 列の順（帳票の列の順）: 回路No ／ 回路名称 ／ 種別（ELB・MCB・Mg など） ／ 容量[A] ／ 電気方式 ／ 使用電圧
+ * 列の順（帳票の列の順）: 回路名称 ／ 種別（ELB・MCB・Mg など） ／ 容量[A] ／ 電気方式 ／ 使用電圧
+ * 回路No は使わない。先頭に回路No（数字だけの列）が付いた表をそのまま貼っても、その列は読み飛ばす。数字だけの行は読み飛ばす
  * - 区切りはタブ（Excel からのコピー）か、2つ以上の空白
  * - 使用電圧は自由に書ける（4パターン以外も、書いたとおりに帳票へ出す。数字として読めることが必要）
  * - 電気方式と使用電圧は連動する（1φ2W=105 ／ 1φ3W=105/210 ／ 3φ3W=210 か 440）
@@ -72,19 +73,17 @@ export function parsePastedCircuits(text: string, defaults: PasteDefaults): Past
       }
     }
     const fail = (reason: string) => result.errors.push({ line: idx + 1, text: raw.trim(), reason });
-    // 回路名称の1列だけが貼られた場合（番号なし）は、番号を自動で振る
-    // ただし、数字だけの行（例: 72）は回路No として扱い、名称は空欄にする
-    const onlyOne = cells.length === 1;
-    const onlyNo = onlyOne && /^\d+(-\d+)?$/.test(cells[0] ?? '');
-    const onlyName = onlyOne && !onlyNo;
-    const no = onlyName ? String(result.circuits.length + 1) : (cells[0] ?? '');
-    const name = onlyName ? (cells[0] ?? '') : (cells[1] ?? '');
-    if (!name && !no) return fail('回路No・回路名称が空です');
+    // 回路No は使わない。数字だけの行は読み飛ばし、先頭の回路No の列（数字だけの列）は読み飛ばす
+    if (cells.length === 1 && /^\d+(-\d+)?$/.test(cells[0] ?? '')) return;
+    if (cells.length >= 2 && /^\d+(-\d+)?$/.test(cells[0] ?? '')) cells.shift();
+    const no = '';
+    const name = cells[0] ?? '';
+    if (!name && !(cells[1] ?? '') && !(cells[2] ?? '')) return fail('回路名称・種別・容量のどれも書かれていません');
 
-    const deviceType = (cells[2] ?? '').trim();
-    const at = cells[3] ? toNumber(cells[3]) : undefined;
-    const sysText = cells[4] ?? '';
-    const voltText = cells[5] ?? '';
+    const deviceType = (cells[1] ?? '').trim();
+    const at = cells[2] ? toNumber(cells[2]) : undefined;
+    const sysText = cells[3] ?? '';
+    const voltText = cells[4] ?? '';
 
     // 電気方式
     let system: WiringSystem | '' | undefined;
@@ -124,7 +123,7 @@ export function parsePastedCircuits(text: string, defaults: PasteDefaults): Past
     } else {
       system = ''; // 既定も空欄 → 電気方式も電圧も空欄
     }
-    if (at !== undefined && (Number.isNaN(at) || at < 0)) return fail(`容量「${cells[3]}」が数値ではありません`);
+    if (at !== undefined && (Number.isNaN(at) || at < 0)) return fail(`容量「${cells[2]}」が数値ではありません`);
 
     result.circuits.push({
       no,

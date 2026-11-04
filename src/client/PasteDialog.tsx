@@ -22,7 +22,7 @@ export function PasteDialog({
         <h2>回路を貼り付けて追加</h2>
         <p className="muted small">
           Excel などの表をコピーして、下の欄に貼り付けてください。列の順は
-                    列の順は<strong>「回路No ／ 回路名称 ／ 種別（ELB・MCB・Mg など） ／ 容量[A] ／ 電気方式 ／ 使用電圧」</strong>です。種別以降は、空欄や列なしでも構いません。電気方式と使用電圧は連動します（1φ2W=105 ／ 1φ3W=105/210 ／ 3φ3W=210 か 440）。どちらか一方を書けば、もう一方は自動で決まります。どちらも空欄なら下の既定の電圧を使います。使用電圧は {VOLTAGE_PATTERN_TEXT} のいずれかです。名称だけの貼り付けも可能です（番号は自動）。
+                    列の順は<strong>「回路名称 ／ 種別（ELB・MCB・Mg など） ／ 容量[A] ／ 電気方式 ／ 使用電圧」</strong>です（回路No は使いません。先頭に回路No の列があっても読み飛ばします）。種別以降は、空欄や列なしでも構いません。電気方式と使用電圧は連動します（1φ2W=105 ／ 1φ3W=105/210 ／ 3φ3W=210 か 440）。どちらか一方を書けば、もう一方は自動で決まります。どちらも空欄なら下の既定の電圧を使います。使用電圧は {VOLTAGE_PATTERN_TEXT} のいずれかです。名称だけの貼り付けも可能です（番号は自動）。
         </p>
         <div className="row">
           <label>
@@ -62,7 +62,6 @@ export function PasteDialog({
               <table className="list small">
                 <thead>
                   <tr>
-                    <th>No</th>
                     <th>回路名称</th>
                     <th>種別</th>
                     <th>容量[A]</th>
@@ -73,7 +72,6 @@ export function PasteDialog({
                 <tbody>
                   {result.circuits.slice(0, 30).map((c, i) => (
                     <tr key={i}>
-                      <td>{c.no}</td>
                       <td>{c.name}</td>
                       <td>{c.deviceType ?? ''}</td>
                       <td>{c.breakerA ?? ''}</td>

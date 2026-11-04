@@ -36,7 +36,7 @@ interface Row {
 let ridSeq = 0;
 const toRow = (c: ExtractedCircuit, unc: Row['unc']): Row => ({
   rid: ridSeq++,
-  no: c.no ?? '',
+  no: '', // 回路No は使わない
   name: c.name ?? '',
   deviceType: c.deviceType ?? '',
   // 電気方式が読めなくても、電圧が4パターンに合えば電気方式を決める（連動）。どちらも無ければ空欄
@@ -188,7 +188,7 @@ export function ConfirmPage({ id, auto }: { id: string; auto: boolean }) {
           circuits: pn.rows.map((r) => {
             const b = num(r.breakerA);
             return {
-              no: r.no.trim(),
+              no: '',
               name: r.name.trim(),
               system: r.system,
               ...(r.deviceType.trim() ? { deviceType: r.deviceType.trim() } : {}),
@@ -327,7 +327,6 @@ export function ConfirmPage({ id, auto }: { id: string; auto: boolean }) {
                       />
                     )}
                   </th>
-                  <th>No</th>
                   <th>回路名称</th>
                   <th>種別</th>
                   <th>容量[A]</th>
@@ -369,9 +368,6 @@ export function ConfirmPage({ id, auto }: { id: string; auto: boolean }) {
                           ×
                         </button>
                       )}
-                    </td>
-                    <td className={uncCls(r.unc.no)} title={r.unc.no}>
-                      <input className="no" value={r.no} disabled={confirmed} onChange={(e) => setRow(r.rid, { no: e.target.value }, 'no')} />
                     </td>
                     <td className={uncCls(r.unc.name)} title={r.unc.name}>
                       <input className="name" value={r.name} disabled={confirmed} onChange={(e) => setRow(r.rid, { name: e.target.value }, 'name')} />
@@ -446,7 +442,7 @@ export function ConfirmPage({ id, auto }: { id: string; auto: boolean }) {
                     <button onClick={() => setPickedRows(new Set())}>選択を解除</button>
                   </>
                 )}
-                <button onClick={() => setRows((rs) => [...rs, toRow({ no: String(rows.length + 1), name: null, system: '1φ3W', useVoltage: DEFAULT_USE_VOLTAGE['1φ3W'], voltageText: '105/210', breakerA: null }, {})])}>
+                <button onClick={() => setRows((rs) => [...rs, toRow({ no: null, name: null, system: '1φ3W', useVoltage: DEFAULT_USE_VOLTAGE['1φ3W'], voltageText: '105/210', breakerA: null }, {})])}>
                   ＋ 回路を追加
                 </button>
                 <span className="muted">

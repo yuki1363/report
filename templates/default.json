@@ -17,8 +17,7 @@
    ]
   },
   "colWidthsMm": [
-   8,
-   31,
+   39,
    10,
    10,
    12,
@@ -194,14 +193,6 @@
      }
     }
    },
-   "2,16": {
-    "value": "",
-    "style": {
-     "border": {
-      "b": "thin"
-     }
-    }
-   },
    "3,0": {
     "value": "設置場所：{{panel.location}}",
     "style": {
@@ -327,14 +318,6 @@
     }
    },
    "3,15": {
-    "value": "",
-    "style": {
-     "border": {
-      "b": "thin"
-     }
-    }
-   },
-   "3,16": {
     "value": "",
     "style": {
      "border": {
@@ -474,16 +457,8 @@
      }
     }
    },
-   "4,16": {
-    "value": "",
-    "style": {
-     "border": {
-      "b": "thin"
-     }
-    }
-   },
    "6,0": {
-    "value": "No",
+    "value": "回路名称",
     "style": {
      "sizePt": 7,
      "bold": true,
@@ -515,7 +490,7 @@
     }
    },
    "6,1": {
-    "value": "回路名称",
+    "value": "種別",
     "style": {
      "sizePt": 7,
      "bold": true,
@@ -547,7 +522,7 @@
     }
    },
    "6,2": {
-    "value": "種別",
+    "value": "容量\n[A]",
     "style": {
      "sizePt": 7,
      "bold": true,
@@ -579,7 +554,7 @@
     }
    },
    "6,3": {
-    "value": "容量\n[A]",
+    "value": "電気\n方式",
     "style": {
      "sizePt": 7,
      "bold": true,
@@ -611,7 +586,7 @@
     }
    },
    "6,4": {
-    "value": "電気\n方式",
+    "value": "使用\n電圧\n[V]",
     "style": {
      "sizePt": 7,
      "bold": true,
@@ -643,23 +618,7 @@
     }
    },
    "6,5": {
-    "value": "使用\n電圧\n[V]",
-    "style": {
-     "sizePt": 7,
-     "bold": true,
-     "hAlign": "center",
-     "wrap": true,
-     "fill": "#EEEEEE",
-     "border": {
-      "t": "thin",
-      "r": "thin",
-      "b": "thin",
-      "l": "thin"
-     }
-    }
-   },
-   "7,5": {
-    "value": "",
+    "value": "絶縁抵抗値 [MΩ]",
     "style": {
      "sizePt": 7,
      "bold": true,
@@ -675,7 +634,7 @@
     }
    },
    "6,6": {
-    "value": "絶縁抵抗値 [MΩ]",
+    "value": "",
     "style": {
      "sizePt": 7,
      "bold": true,
@@ -786,23 +745,7 @@
      }
     }
    },
-   "6,13": {
-    "value": "",
-    "style": {
-     "sizePt": 7,
-     "bold": true,
-     "hAlign": "center",
-     "wrap": true,
-     "fill": "#EEEEEE",
-     "border": {
-      "t": "thin",
-      "r": "thin",
-      "b": "thin",
-      "l": "thin"
-     }
-    }
-   },
-   "7,6": {
+   "7,5": {
     "value": "R-S",
     "style": {
      "sizePt": 7,
@@ -818,7 +761,7 @@
      }
     }
    },
-   "7,7": {
+   "7,6": {
     "value": "S-T",
     "style": {
      "sizePt": 7,
@@ -834,7 +777,7 @@
      }
     }
    },
-   "7,8": {
+   "7,7": {
     "value": "T-R",
     "style": {
      "sizePt": 7,
@@ -850,7 +793,7 @@
      }
     }
    },
-   "7,9": {
+   "7,8": {
     "value": "R-E",
     "style": {
      "sizePt": 7,
@@ -866,7 +809,7 @@
      }
     }
    },
-   "7,10": {
+   "7,9": {
     "value": "S-E",
     "style": {
      "sizePt": 7,
@@ -882,7 +825,7 @@
      }
     }
    },
-   "7,11": {
+   "7,10": {
     "value": "T-E",
     "style": {
      "sizePt": 7,
@@ -898,7 +841,7 @@
      }
     }
    },
-   "7,12": {
+   "7,11": {
     "value": "N-E",
     "style": {
      "sizePt": 7,
@@ -914,7 +857,7 @@
      }
     }
    },
-   "7,13": {
+   "7,12": {
     "value": "一括-E",
     "style": {
      "sizePt": 7,
@@ -930,8 +873,40 @@
      }
     }
    },
-   "6,14": {
+   "6,13": {
     "value": "基準値\n[MΩ]",
+    "style": {
+     "sizePt": 7,
+     "bold": true,
+     "hAlign": "center",
+     "wrap": true,
+     "fill": "#EEEEEE",
+     "border": {
+      "t": "thin",
+      "r": "thin",
+      "b": "thin",
+      "l": "thin"
+     }
+    }
+   },
+   "7,13": {
+    "value": "",
+    "style": {
+     "sizePt": 7,
+     "bold": true,
+     "hAlign": "center",
+     "wrap": true,
+     "fill": "#EEEEEE",
+     "border": {
+      "t": "thin",
+      "r": "thin",
+      "b": "thin",
+      "l": "thin"
+     }
+    }
+   },
+   "6,14": {
+    "value": "判定",
     "style": {
      "sizePt": 7,
      "bold": true,
@@ -963,7 +938,7 @@
     }
    },
    "6,15": {
-    "value": "判定",
+    "value": "備考",
     "style": {
      "sizePt": 7,
      "bold": true,
@@ -994,52 +969,7 @@
      }
     }
    },
-   "6,16": {
-    "value": "備考",
-    "style": {
-     "sizePt": 7,
-     "bold": true,
-     "hAlign": "center",
-     "wrap": true,
-     "fill": "#EEEEEE",
-     "border": {
-      "t": "thin",
-      "r": "thin",
-      "b": "thin",
-      "l": "thin"
-     }
-    }
-   },
-   "7,16": {
-    "value": "",
-    "style": {
-     "sizePt": 7,
-     "bold": true,
-     "hAlign": "center",
-     "wrap": true,
-     "fill": "#EEEEEE",
-     "border": {
-      "t": "thin",
-      "r": "thin",
-      "b": "thin",
-      "l": "thin"
-     }
-    }
-   },
    "8,0": {
-    "value": "{{c.no}}",
-    "style": {
-     "sizePt": 8,
-     "hAlign": "center",
-     "border": {
-      "t": "thin",
-      "r": "thin",
-      "b": "thin",
-      "l": "thin"
-     }
-    }
-   },
-   "8,1": {
     "value": "{{c.name}}",
     "style": {
      "sizePt": 8,
@@ -1052,7 +982,7 @@
      }
     }
    },
-   "8,2": {
+   "8,1": {
     "value": "{{c.deviceType}}",
     "style": {
      "sizePt": 8,
@@ -1066,7 +996,7 @@
      }
     }
    },
-   "8,3": {
+   "8,2": {
     "value": "{{c.breakerA}}",
     "style": {
      "sizePt": 8,
@@ -1080,7 +1010,7 @@
      }
     }
    },
-   "8,4": {
+   "8,3": {
     "value": "{{c.system}}",
     "style": {
      "sizePt": 8,
@@ -1093,7 +1023,7 @@
      }
     }
    },
-   "8,5": {
+   "8,4": {
     "value": "{{c.useVoltage}}",
     "style": {
      "sizePt": 8,
@@ -1107,7 +1037,7 @@
      }
     }
    },
-   "8,6": {
+   "8,5": {
     "value": "{{c.RS}}",
     "style": {
      "sizePt": 8,
@@ -1121,7 +1051,7 @@
      }
     }
    },
-   "8,7": {
+   "8,6": {
     "value": "{{c.ST}}",
     "style": {
      "sizePt": 8,
@@ -1135,7 +1065,7 @@
      }
     }
    },
-   "8,8": {
+   "8,7": {
     "value": "{{c.TR}}",
     "style": {
      "sizePt": 8,
@@ -1149,7 +1079,7 @@
      }
     }
    },
-   "8,9": {
+   "8,8": {
     "value": "{{c.RE}}",
     "style": {
      "sizePt": 8,
@@ -1163,7 +1093,7 @@
      }
     }
    },
-   "8,10": {
+   "8,9": {
     "value": "{{c.SE}}",
     "style": {
      "sizePt": 8,
@@ -1177,7 +1107,7 @@
      }
     }
    },
-   "8,11": {
+   "8,10": {
     "value": "{{c.TE}}",
     "style": {
      "sizePt": 8,
@@ -1191,7 +1121,7 @@
      }
     }
    },
-   "8,12": {
+   "8,11": {
     "value": "{{c.NE}}",
     "style": {
      "sizePt": 8,
@@ -1205,7 +1135,7 @@
      }
     }
    },
-   "8,13": {
+   "8,12": {
     "value": "{{c.ALL_E}}",
     "style": {
      "sizePt": 8,
@@ -1219,7 +1149,7 @@
      }
     }
    },
-   "8,14": {
+   "8,13": {
     "value": "{{c.criterion}}",
     "style": {
      "sizePt": 8,
@@ -1232,7 +1162,7 @@
      }
     }
    },
-   "8,15": {
+   "8,14": {
     "value": "{{c.judgment}}",
     "style": {
      "sizePt": 8,
@@ -1246,7 +1176,7 @@
      }
     }
    },
-   "8,16": {
+   "8,15": {
     "value": "{{c.note}}",
     "style": {
      "sizePt": 8,
@@ -1545,20 +1475,6 @@
      }
     }
    },
-   "10,16": {
-    "value": "",
-    "style": {
-     "sizePt": 9,
-     "vAlign": "top",
-     "wrap": true,
-     "border": {
-      "t": "thin",
-      "r": "thin",
-      "b": "thin",
-      "l": "thin"
-     }
-    }
-   },
    "11,2": {
     "value": "",
     "style": {
@@ -1742,20 +1658,6 @@
     }
    },
    "11,15": {
-    "value": "",
-    "style": {
-     "sizePt": 9,
-     "vAlign": "top",
-     "wrap": true,
-     "border": {
-      "t": "thin",
-      "r": "thin",
-      "b": "thin",
-      "l": "thin"
-     }
-    }
-   },
-   "11,16": {
     "value": "",
     "style": {
      "sizePt": 9,
@@ -1965,20 +1867,6 @@
      }
     }
    },
-   "12,16": {
-    "value": "",
-    "style": {
-     "sizePt": 9,
-     "vAlign": "top",
-     "wrap": true,
-     "border": {
-      "t": "thin",
-      "r": "thin",
-      "b": "thin",
-      "l": "thin"
-     }
-    }
-   },
    "14,0": {
     "value": "判定基準：電気設備技術基準 第58条（使用電圧300V以下かつ対地電圧150V以下：0.1MΩ以上／300V以下でその他：0.2MΩ以上／300V超：0.4MΩ以上）",
     "style": {
@@ -1999,7 +1887,7 @@
     "r1": 0,
     "c1": 0,
     "r2": 0,
-    "c2": 16
+    "c2": 15
    },
    {
     "r1": 2,
@@ -2011,7 +1899,7 @@
     "r1": 2,
     "c1": 8,
     "r2": 2,
-    "c2": 16
+    "c2": 15
    },
    {
     "r1": 3,
@@ -2023,7 +1911,7 @@
     "r1": 3,
     "c1": 8,
     "r2": 3,
-    "c2": 16
+    "c2": 15
    },
    {
     "r1": 4,
@@ -2035,7 +1923,7 @@
     "r1": 4,
     "c1": 8,
     "r2": 4,
-    "c2": 16
+    "c2": 15
    },
    {
     "r1": 6,
@@ -2070,13 +1958,13 @@
    {
     "r1": 6,
     "c1": 5,
-    "r2": 7,
-    "c2": 5
+    "r2": 6,
+    "c2": 12
    },
    {
     "r1": 6,
-    "c1": 6,
-    "r2": 6,
+    "c1": 13,
+    "r2": 7,
     "c2": 13
    },
    {
@@ -2092,12 +1980,6 @@
     "c2": 15
    },
    {
-    "r1": 6,
-    "c1": 16,
-    "r2": 7,
-    "c2": 16
-   },
-   {
     "r1": 10,
     "c1": 0,
     "r2": 12,
@@ -2107,19 +1989,19 @@
     "r1": 10,
     "c1": 2,
     "r2": 12,
-    "c2": 16
+    "c2": 15
    },
    {
     "r1": 14,
     "c1": 0,
     "r2": 14,
-    "c2": 16
+    "c2": 15
    },
    {
     "r1": 15,
     "c1": 0,
     "r2": 15,
-    "c2": 16
+    "c2": 15
    }
   ],
   "repeatRegion": {

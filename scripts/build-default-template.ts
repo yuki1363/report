@@ -8,16 +8,15 @@ import { fileURLToPath } from 'node:url';
 import { READING_KEYS, READING_LABELS, TemplateSchema, type Cell, type CellStyle, type Sheet } from '../src/shared/schema.ts';
 
 const cols = [
-  8, // 0 No
-  31, // 1 回路名称
-  10, // 2 種別（ELB・MCB・Mg など）
-  10, // 3 容量[A]
-  12, // 4 電気方式
-  13, // 5 使用電圧（「105/210」の表記が入る）
-  9.5, 9.5, 9.5, 9.5, 9.5, 9.5, 9.5, 9.5, // 6-13 測定値
-  10, // 14 基準値
-  9, // 15 判定
-  15, // 16 備考
+  39, // 0 回路名称（回路No の列は載せない。空いた幅を回路名称に）
+  10, // 1 種別（ELB・MCB・Mg など）
+  10, // 2 容量[A]
+  12, // 3 電気方式
+  13, // 4 使用電圧（「105/210」の表記が入る）
+  9.5, 9.5, 9.5, 9.5, 9.5, 9.5, 9.5, 9.5, // 5-12 測定値
+  10, // 13 基準値
+  9, // 14 判定
+  15, // 15 備考
 ];
 const LAST = cols.length - 1;
 
@@ -65,31 +64,29 @@ rows.push(4);
 // 6-7: 表の見出し（2段）
 rows.push(6, 6);
 const H: CellStyle = { hAlign: 'center', bold: true, fill: '#EEEEEE', wrap: true, sizePt: 7 };
-boxed(6, 0, 7, 0, 'No', H);
-boxed(6, 1, 7, 1, '回路名称', H);
-boxed(6, 2, 7, 2, '種別', H);
-boxed(6, 3, 7, 3, '容量\n[A]', H);
-boxed(6, 4, 7, 4, '電気\n方式', H);
-boxed(6, 5, 7, 5, '使用\n電圧\n[V]', H);
-boxed(6, 6, 6, 13, '絶縁抵抗値 [MΩ]', H);
-READING_KEYS.forEach((k, i) => boxed(7, 6 + i, 7, 6 + i, READING_LABELS[k], H));
-boxed(6, 14, 7, 14, '基準値\n[MΩ]', H);
-boxed(6, 15, 7, 15, '判定', H);
-boxed(6, 16, 7, 16, '備考', H);
+boxed(6, 0, 7, 0, '回路名称', H);
+boxed(6, 1, 7, 1, '種別', H);
+boxed(6, 2, 7, 2, '容量\n[A]', H);
+boxed(6, 3, 7, 3, '電気\n方式', H);
+boxed(6, 4, 7, 4, '使用\n電圧\n[V]', H);
+boxed(6, 5, 6, 12, '絶縁抵抗値 [MΩ]', H);
+READING_KEYS.forEach((k, i) => boxed(7, 5 + i, 7, 5 + i, READING_LABELS[k], H));
+boxed(6, 13, 7, 13, '基準値\n[MΩ]', H);
+boxed(6, 14, 7, 14, '判定', H);
+boxed(6, 15, 7, 15, '備考', H);
 
-// 8: 回路行（回路数ぶん繰り返す）。最小値の列は載せない
+// 8: 回路行（回路数ぶん繰り返す）。回路No・最小値の列は載せない
 rows.push(7);
 const C: CellStyle = { border: all, sizePt: 8 };
-set(8, 0, '{{c.no}}', { ...C, hAlign: 'center' });
-set(8, 1, '{{c.name}}', { ...C, shrinkToFit: true });
-set(8, 2, '{{c.deviceType}}', { ...C, hAlign: 'center', shrinkToFit: true });
-set(8, 3, '{{c.breakerA}}', { ...C, hAlign: 'right', shrinkToFit: true });
-set(8, 4, '{{c.system}}', { ...C, hAlign: 'center' });
-set(8, 5, '{{c.useVoltage}}', { ...C, hAlign: 'right', shrinkToFit: true });
-READING_KEYS.forEach((k, i) => set(8, 6 + i, `{{c.${k}}}`, { ...C, hAlign: 'right', shrinkToFit: true }));
-set(8, 14, '{{c.criterion}}', { ...C, hAlign: 'right' });
-set(8, 15, '{{c.judgment}}', { ...C, hAlign: 'center', bold: true });
-set(8, 16, '{{c.note}}', { ...C, shrinkToFit: true });
+set(8, 0, '{{c.name}}', { ...C, shrinkToFit: true });
+set(8, 1, '{{c.deviceType}}', { ...C, hAlign: 'center', shrinkToFit: true });
+set(8, 2, '{{c.breakerA}}', { ...C, hAlign: 'right', shrinkToFit: true });
+set(8, 3, '{{c.system}}', { ...C, hAlign: 'center' });
+set(8, 4, '{{c.useVoltage}}', { ...C, hAlign: 'right', shrinkToFit: true });
+READING_KEYS.forEach((k, i) => set(8, 5 + i, `{{c.${k}}}`, { ...C, hAlign: 'right', shrinkToFit: true }));
+set(8, 13, '{{c.criterion}}', { ...C, hAlign: 'right' });
+set(8, 14, '{{c.judgment}}', { ...C, hAlign: 'center', bold: true });
+set(8, 15, '{{c.note}}', { ...C, shrinkToFit: true });
 
 // 9: 余白
 rows.push(4);

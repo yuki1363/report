@@ -273,7 +273,7 @@ export function ReportEditor({ id }: { id: string }) {
           </div>
           {report.circuits.some((c) => !isLowVoltage(c.useVoltage)) && (
             <p className="warn">
-              使用電圧が低圧（{LOW_VOLTAGE_MAX_V}V 以下）を超えている回路があります（{report.circuits.filter((c) => !isLowVoltage(c.useVoltage)).map((c) => c.no || c.name).join('、')}）。
+              使用電圧が低圧（{LOW_VOLTAGE_MAX_V}V 以下）を超えている回路があります（{report.circuits.filter((c) => !isLowVoltage(c.useVoltage)).map((c) => c.name || '（名称なし）').join('、')}）。
               このアプリは低圧の絶縁抵抗測定だけが対象です。入力を確認してください。
             </p>
           )}
@@ -492,7 +492,7 @@ function VoltageInput({
 }
 
 /** 入力する項目（左から）。測定値は入力しない（帳票の空欄に、手書きで記入する） */
-const COLS = ['no', 'name', 'deviceType', 'breakerA', 'system', 'useVoltage'] as const;
+const COLS = ['name', 'deviceType', 'breakerA', 'system', 'useVoltage'] as const;
 
 function CircuitGrid({
   circuits,
@@ -534,7 +534,7 @@ function CircuitGrid({
   const deleteSelected = () => {
     const ids = circuits.filter((c) => picked.has(c.id)).map((c) => c.id);
     if (ids.length === 0) return;
-    const names = circuits.filter((c) => picked.has(c.id)).slice(0, 5).map((c) => `${c.no} ${c.name}`.trim());
+    const names = circuits.filter((c) => picked.has(c.id)).slice(0, 5).map((c) => c.name || '（名称なし）');
     if (!confirm(`選択した ${ids.length} 件の回路を削除します。よろしいですか？\n\n${names.join('\n')}${ids.length > 5 ? `\n…ほか ${ids.length - 5} 件` : ''}`)) return;
     removeCircuits(ids);
     setPicked(new Set());
@@ -604,7 +604,6 @@ function CircuitGrid({
                 aria-label="すべて選択"
               />
             </th>
-            <th>No</th>
             <th>回路名称</th>
             <th title="ELB・MCB・Mg など（自由に書けます）">種別</th>
             <th>容量[A]</th>
@@ -621,7 +620,7 @@ function CircuitGrid({
                   type="checkbox"
                   checked={picked.has(c.id)}
                   tabIndex={-1}
-                  aria-label={`回路「${c.no} ${c.name}」を選択`}
+                  aria-label={`回路「${c.name || '名称なし'}」を選択`}
                   onClick={(e) => pick(i, (e.target as HTMLInputElement).checked, e.shiftKey)}
                   onChange={() => {}}
                 />
@@ -629,14 +628,11 @@ function CircuitGrid({
                   tabIndex={-1}
                   className="danger del-x"
                   title="この回路を削除"
-                  aria-label={`回路「${c.no} ${c.name}」を削除`}
-                  onClick={() => confirm(`回路「${c.no} ${c.name}」を削除しますか？`) && removeCircuit(c.id)}
+                  aria-label={`回路「${c.name || '名称なし'}」を削除`}
+                  onClick={() => confirm(`回路「${c.name || '（名称なし）'}」を削除しますか？`) && removeCircuit(c.id)}
                 >
                   ×
                 </button>
-              </td>
-              <td>
-                <input className="no" value={c.no} {...cellProps(i, 'no')} onChange={(e) => updateCircuit(c.id, (x) => ({ ...x, no: e.target.value }))} />
               </td>
               <td>
                 <input className="name" value={c.name} {...cellProps(i, 'name')} onChange={(e) => updateCircuit(c.id, (x) => ({ ...x, name: e.target.value }))} />

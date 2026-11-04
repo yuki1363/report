@@ -11,11 +11,10 @@ export function nextCircuitNo(prev: string): string {
 }
 
 export function newCircuit(prev?: Circuit, newId: () => string = () => crypto.randomUUID()): Circuit {
-  const nextNo = prev ? nextCircuitNo(prev.no) : '';
   // 直前の回路の方式・電圧（表記も）を引き継ぐ。最初の回路は 1φ3W（105/210）
   const base: Circuit = {
     id: newId(),
-    no: nextNo || (prev ? '' : '1'),
+    no: '', // 回路No は使わない
     name: '',
     system: prev?.system ?? '1φ3W',
     useVoltage: prev?.useVoltage ?? 210,

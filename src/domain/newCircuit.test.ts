@@ -8,7 +8,7 @@ const prev: Circuit = { id: 'a', no: '01', name: '照明', system: '1φ3W', useV
 describe('回路の追加で、書いたとおりに引き継ぐ', () => {
   it('電圧の表記（105/210）と、回路Noの桁（01 → 02）を引き継ぐ', () => {
     const c = newCircuit(prev, () => 'x');
-    expect(c).toMatchObject({ no: '02', system: '1φ3W', useVoltage: 210, voltageLabel: '105/210', groundVoltage: 105 });
+    expect(c).toMatchObject({ no: '', system: '1φ3W', useVoltage: 210, voltageLabel: '105/210', groundVoltage: 105 });
   });
   it('表記が無ければ付けない。番号の採番', () => {
     const { voltageLabel: _l, ...plain } = prev;
@@ -26,6 +26,6 @@ describe('回路の追加で、書いたとおりに引き継ぐ', () => {
 
 describe('最初の回路', () => {
   it('1φ3W・105/210（対地 105V）で始まる', () => {
-    expect(newCircuit(undefined, () => 'x')).toMatchObject({ no: '1', system: '1φ3W', useVoltage: 210, voltageLabel: '105/210', groundVoltage: 105 });
+    expect(newCircuit(undefined, () => 'x')).toMatchObject({ no: '', system: '1φ3W', useVoltage: 210, voltageLabel: '105/210', groundVoltage: 105 });
   });
 });
