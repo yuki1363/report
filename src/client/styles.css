@@ -178,3 +178,5 @@ td.dropped { color: var(--bad); font-weight: bold; background: #fee2e2; }
 .paste-preview { max-height: 240px; overflow: auto; margin-bottom: 8px; }
 .paste-preview table td.muted { color: #9ca3af; }
 .inline-check { display: inline-flex; flex-direction: row; align-items: center; gap: 4px; font-size: 12px; color: var(--muted); }
+.header-form label.wide { grid-column: 1 / -1; }
+.header-form textarea { width: 100%; font: inherit; color: var(--fg); font-size: 14px; border: 1px solid var(--line); border-radius: 3px; padding: 4px 6px; resize: vertical; }

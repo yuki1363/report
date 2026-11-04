@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { DEFAULT_USE_VOLTAGE } from '../../domain/groundVoltage.ts';
 import { LOW_VOLTAGE_MAX_V } from '../../domain/judgment.ts';
-import { parseVoltage } from '../../domain/system.ts';
+import { parseVoltage, voltageLabel } from '../../domain/system.ts';
 import type { ExtractedCircuit, ImportRecord } from '../../shared/extraction.ts';
 import { WIRING_SYSTEMS, type WiringSystem } from '../../shared/schema.ts';
 import { api } from '../api.ts';
@@ -175,6 +175,7 @@ export function ConfirmPage({ id, auto }: { id: string; auto: boolean }) {
               name: r.name.trim(),
               system: r.system as WiringSystem,
               useVoltage: parseVoltage(r.useVoltage)!,
+              ...(voltageLabel(r.useVoltage) ? { voltageLabel: voltageLabel(r.useVoltage)! } : {}),
               ...(b !== undefined ? { breakerA: b } : {}),
             };
           }),

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Circuit } from '../shared/schema.ts';
 import { autoGroundVoltage } from './groundVoltage.ts';
-import { criterionFor, isLowVoltage, judgeCircuit, judgePanel, LOW_VOLTAGE_MAX_V } from './judgment.ts';
+import { criterionFor, isLowVoltage, judgeCircuit, judgePanel, LOW_VOLTAGE_MAX_V, VERDICT_LABEL } from './judgment.ts';
 
 type C = Pick<Circuit, 'readings' | 'useVoltage' | 'groundVoltage'>;
 const v = (mohm: number) => ({ kind: 'value' as const, mohm });
@@ -62,8 +62,13 @@ describe('盤全体の判定', () => {
   const none: C = { useVoltage: 100, groundVoltage: 100, readings: {} };
   it('1回路でも否があれば否', () => expect(judgePanel([good, bad, none])).toBe('bad'));
   it('全回路良なら良', () => expect(judgePanel([good, good])).toBe('good'));
-  it('未判定を含み否が無ければ未判定', () => expect(judgePanel([good, none])).toBe('none'));
-  it('回路0件は未判定', () => expect(judgePanel([])).toBe('none'));
+  it('測定しない回路（未入力）は無視し、良があれば良', () => expect(judgePanel([good, none])).toBe('good'));
+  it('否があれば、測定しない回路があっても否', () => expect(judgePanel([bad, none])).toBe('bad'));
+  it('判定できた回路が無ければ none（表示は空欄）', () => {
+    expect(judgePanel([none, none])).toBe('none');
+    expect(judgePanel([])).toBe('none');
+    expect(VERDICT_LABEL.none).toBe('');
+  });
 });
 
 describe('対地電圧の自動算出', () => {

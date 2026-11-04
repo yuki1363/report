@@ -71,7 +71,7 @@ describe('generateSheet（repeatRegion 展開）', () => {
     const s = generateSheet(mini, report(0));
     expect(s.rowHeightsMm.length).toBe(5);
     expect(s.cells['2,0']!.value).toBe('');
-    expect(s.cells['4,0']!.value).toBe('計 0 / 未判定 / {{unknown}}');
+    expect(s.cells['4,0']!.value).toBe('計 0 /  / {{unknown}}');
   });
 
   it('既定テンプレート: 判定・測定値の表記', () => {
@@ -85,8 +85,12 @@ describe('generateSheet（repeatRegion 展開）', () => {
     expect(s.cells[`${row},13`]!.value).toBe('0.2'); // 基準値
     expect(s.cells[`${row},14`]!.value).toBe('良');
     expect(s.page.repeatHeaderRows).toEqual([6, 7]);
-    // 総合判定は回路2件ぶん下にずれる
-    expect(s.cells['11,3']!.value).toBe('良');
+    // 備考欄は回路2件ぶん下にずれ、報告書の備考が入る。総合判定は帳票に載らない
+    expect(s.cells['11,0']!.value).toBe('備考');
+    const withNote = generateSheet(template.sheet, { ...report(2), note: '東側の盤は来月再測定\n予備回路は未接続' });
+    expect(withNote.cells['11,2']!.value).toBe('東側の盤は来月再測定\n予備回路は未接続');
+    expect(withNote.cells['11,2']!.style?.wrap).toBe(true);
+    expect(JSON.stringify(withNote.cells)).not.toContain('総合判定');
   });
 
   it('既定テンプレートに、対地電圧・測定電圧・測定者・測定器は出ない', () => {

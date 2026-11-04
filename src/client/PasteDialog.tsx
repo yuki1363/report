@@ -85,7 +85,7 @@ export function PasteDialog({
                       <td>{c.no}</td>
                       <td>{c.name}</td>
                       <td className={c.defaulted.includes('system') ? 'muted' : ''}>{c.system}</td>
-                      <td className={c.defaulted.includes('useVoltage') ? 'muted' : ''}>{c.useVoltage}</td>
+                      <td className={c.defaulted.includes('useVoltage') ? 'muted' : ''}>{c.voltageLabel ?? c.useVoltage}</td>
                       <td>{c.breakerA ?? ''}</td>
                     </tr>
                   ))}

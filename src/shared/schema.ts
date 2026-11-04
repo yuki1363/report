@@ -139,6 +139,8 @@ export const CircuitSchema = z.object({
   name: z.string(),
   system: WiringSystemSchema,
   useVoltage: z.number().nonnegative(),
+  /** 帳票に出す電圧の表記（例: "105/210"）。省略時は使用電圧の数値を出す。判定には使わない */
+  voltageLabel: z.string().optional(),
   groundVoltage: z.number().nonnegative(),
   testVoltage: TestVoltageSchema,
   breakerA: z.number().nonnegative().optional(),
@@ -166,6 +168,8 @@ export const ReportSchema = z.object({
   inspector: z.string(),
   tempC: z.number().optional(),
   humidity: z.number().optional(),
+  /** 帳票の備考欄（大きめ）に出す文章 */
+  note: z.string().optional(),
   instrument: z.object({
     model: z.string(),
     serial: z.string().optional(),

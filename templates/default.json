@@ -18,9 +18,9 @@
   },
   "colWidthsMm": [
    8,
-   40,
+   37,
    12,
-   10,
+   13,
    9.5,
    9.5,
    9.5,
@@ -45,7 +45,10 @@
    6,
    7,
    4,
-   8,
+   10,
+   10,
+   10,
+   3,
    8,
    5
   ],
@@ -1010,6 +1013,7 @@
     "style": {
      "sizePt": 8,
      "hAlign": "right",
+     "shrinkToFit": true,
      "border": {
       "t": "thin",
       "r": "thin",
@@ -1185,7 +1189,7 @@
     }
    },
    "10,0": {
-    "value": "総合判定",
+    "value": "備考",
     "style": {
      "sizePt": 10,
      "bold": true,
@@ -1214,7 +1218,7 @@
      }
     }
    },
-   "10,2": {
+   "11,0": {
     "value": "",
     "style": {
      "sizePt": 10,
@@ -1229,12 +1233,71 @@
      }
     }
    },
-   "10,3": {
-    "value": "{{report.judgment}}",
+   "11,1": {
+    "value": "",
     "style": {
-     "sizePt": 12,
+     "sizePt": 10,
      "bold": true,
      "hAlign": "center",
+     "fill": "#EEEEEE",
+     "border": {
+      "t": "thin",
+      "r": "thin",
+      "b": "thin",
+      "l": "thin"
+     }
+    }
+   },
+   "12,0": {
+    "value": "",
+    "style": {
+     "sizePt": 10,
+     "bold": true,
+     "hAlign": "center",
+     "fill": "#EEEEEE",
+     "border": {
+      "t": "thin",
+      "r": "thin",
+      "b": "thin",
+      "l": "thin"
+     }
+    }
+   },
+   "12,1": {
+    "value": "",
+    "style": {
+     "sizePt": 10,
+     "bold": true,
+     "hAlign": "center",
+     "fill": "#EEEEEE",
+     "border": {
+      "t": "thin",
+      "r": "thin",
+      "b": "thin",
+      "l": "thin"
+     }
+    }
+   },
+   "10,2": {
+    "value": "{{report.note}}",
+    "style": {
+     "sizePt": 9,
+     "vAlign": "top",
+     "wrap": true,
+     "border": {
+      "t": "thin",
+      "r": "thin",
+      "b": "thin",
+      "l": "thin"
+     }
+    }
+   },
+   "10,3": {
+    "value": "",
+    "style": {
+     "sizePt": 9,
+     "vAlign": "top",
+     "wrap": true,
      "border": {
       "t": "thin",
       "r": "thin",
@@ -1246,9 +1309,9 @@
    "10,4": {
     "value": "",
     "style": {
-     "sizePt": 12,
-     "bold": true,
-     "hAlign": "center",
+     "sizePt": 9,
+     "vAlign": "top",
+     "wrap": true,
      "border": {
       "t": "thin",
       "r": "thin",
@@ -1260,9 +1323,9 @@
    "10,5": {
     "value": "",
     "style": {
-     "sizePt": 12,
-     "bold": true,
-     "hAlign": "center",
+     "sizePt": 9,
+     "vAlign": "top",
+     "wrap": true,
      "border": {
       "t": "thin",
       "r": "thin",
@@ -1271,7 +1334,539 @@
      }
     }
    },
-   "11,0": {
+   "10,6": {
+    "value": "",
+    "style": {
+     "sizePt": 9,
+     "vAlign": "top",
+     "wrap": true,
+     "border": {
+      "t": "thin",
+      "r": "thin",
+      "b": "thin",
+      "l": "thin"
+     }
+    }
+   },
+   "10,7": {
+    "value": "",
+    "style": {
+     "sizePt": 9,
+     "vAlign": "top",
+     "wrap": true,
+     "border": {
+      "t": "thin",
+      "r": "thin",
+      "b": "thin",
+      "l": "thin"
+     }
+    }
+   },
+   "10,8": {
+    "value": "",
+    "style": {
+     "sizePt": 9,
+     "vAlign": "top",
+     "wrap": true,
+     "border": {
+      "t": "thin",
+      "r": "thin",
+      "b": "thin",
+      "l": "thin"
+     }
+    }
+   },
+   "10,9": {
+    "value": "",
+    "style": {
+     "sizePt": 9,
+     "vAlign": "top",
+     "wrap": true,
+     "border": {
+      "t": "thin",
+      "r": "thin",
+      "b": "thin",
+      "l": "thin"
+     }
+    }
+   },
+   "10,10": {
+    "value": "",
+    "style": {
+     "sizePt": 9,
+     "vAlign": "top",
+     "wrap": true,
+     "border": {
+      "t": "thin",
+      "r": "thin",
+      "b": "thin",
+      "l": "thin"
+     }
+    }
+   },
+   "10,11": {
+    "value": "",
+    "style": {
+     "sizePt": 9,
+     "vAlign": "top",
+     "wrap": true,
+     "border": {
+      "t": "thin",
+      "r": "thin",
+      "b": "thin",
+      "l": "thin"
+     }
+    }
+   },
+   "10,12": {
+    "value": "",
+    "style": {
+     "sizePt": 9,
+     "vAlign": "top",
+     "wrap": true,
+     "border": {
+      "t": "thin",
+      "r": "thin",
+      "b": "thin",
+      "l": "thin"
+     }
+    }
+   },
+   "10,13": {
+    "value": "",
+    "style": {
+     "sizePt": 9,
+     "vAlign": "top",
+     "wrap": true,
+     "border": {
+      "t": "thin",
+      "r": "thin",
+      "b": "thin",
+      "l": "thin"
+     }
+    }
+   },
+   "10,14": {
+    "value": "",
+    "style": {
+     "sizePt": 9,
+     "vAlign": "top",
+     "wrap": true,
+     "border": {
+      "t": "thin",
+      "r": "thin",
+      "b": "thin",
+      "l": "thin"
+     }
+    }
+   },
+   "10,15": {
+    "value": "",
+    "style": {
+     "sizePt": 9,
+     "vAlign": "top",
+     "wrap": true,
+     "border": {
+      "t": "thin",
+      "r": "thin",
+      "b": "thin",
+      "l": "thin"
+     }
+    }
+   },
+   "11,2": {
+    "value": "",
+    "style": {
+     "sizePt": 9,
+     "vAlign": "top",
+     "wrap": true,
+     "border": {
+      "t": "thin",
+      "r": "thin",
+      "b": "thin",
+      "l": "thin"
+     }
+    }
+   },
+   "11,3": {
+    "value": "",
+    "style": {
+     "sizePt": 9,
+     "vAlign": "top",
+     "wrap": true,
+     "border": {
+      "t": "thin",
+      "r": "thin",
+      "b": "thin",
+      "l": "thin"
+     }
+    }
+   },
+   "11,4": {
+    "value": "",
+    "style": {
+     "sizePt": 9,
+     "vAlign": "top",
+     "wrap": true,
+     "border": {
+      "t": "thin",
+      "r": "thin",
+      "b": "thin",
+      "l": "thin"
+     }
+    }
+   },
+   "11,5": {
+    "value": "",
+    "style": {
+     "sizePt": 9,
+     "vAlign": "top",
+     "wrap": true,
+     "border": {
+      "t": "thin",
+      "r": "thin",
+      "b": "thin",
+      "l": "thin"
+     }
+    }
+   },
+   "11,6": {
+    "value": "",
+    "style": {
+     "sizePt": 9,
+     "vAlign": "top",
+     "wrap": true,
+     "border": {
+      "t": "thin",
+      "r": "thin",
+      "b": "thin",
+      "l": "thin"
+     }
+    }
+   },
+   "11,7": {
+    "value": "",
+    "style": {
+     "sizePt": 9,
+     "vAlign": "top",
+     "wrap": true,
+     "border": {
+      "t": "thin",
+      "r": "thin",
+      "b": "thin",
+      "l": "thin"
+     }
+    }
+   },
+   "11,8": {
+    "value": "",
+    "style": {
+     "sizePt": 9,
+     "vAlign": "top",
+     "wrap": true,
+     "border": {
+      "t": "thin",
+      "r": "thin",
+      "b": "thin",
+      "l": "thin"
+     }
+    }
+   },
+   "11,9": {
+    "value": "",
+    "style": {
+     "sizePt": 9,
+     "vAlign": "top",
+     "wrap": true,
+     "border": {
+      "t": "thin",
+      "r": "thin",
+      "b": "thin",
+      "l": "thin"
+     }
+    }
+   },
+   "11,10": {
+    "value": "",
+    "style": {
+     "sizePt": 9,
+     "vAlign": "top",
+     "wrap": true,
+     "border": {
+      "t": "thin",
+      "r": "thin",
+      "b": "thin",
+      "l": "thin"
+     }
+    }
+   },
+   "11,11": {
+    "value": "",
+    "style": {
+     "sizePt": 9,
+     "vAlign": "top",
+     "wrap": true,
+     "border": {
+      "t": "thin",
+      "r": "thin",
+      "b": "thin",
+      "l": "thin"
+     }
+    }
+   },
+   "11,12": {
+    "value": "",
+    "style": {
+     "sizePt": 9,
+     "vAlign": "top",
+     "wrap": true,
+     "border": {
+      "t": "thin",
+      "r": "thin",
+      "b": "thin",
+      "l": "thin"
+     }
+    }
+   },
+   "11,13": {
+    "value": "",
+    "style": {
+     "sizePt": 9,
+     "vAlign": "top",
+     "wrap": true,
+     "border": {
+      "t": "thin",
+      "r": "thin",
+      "b": "thin",
+      "l": "thin"
+     }
+    }
+   },
+   "11,14": {
+    "value": "",
+    "style": {
+     "sizePt": 9,
+     "vAlign": "top",
+     "wrap": true,
+     "border": {
+      "t": "thin",
+      "r": "thin",
+      "b": "thin",
+      "l": "thin"
+     }
+    }
+   },
+   "11,15": {
+    "value": "",
+    "style": {
+     "sizePt": 9,
+     "vAlign": "top",
+     "wrap": true,
+     "border": {
+      "t": "thin",
+      "r": "thin",
+      "b": "thin",
+      "l": "thin"
+     }
+    }
+   },
+   "12,2": {
+    "value": "",
+    "style": {
+     "sizePt": 9,
+     "vAlign": "top",
+     "wrap": true,
+     "border": {
+      "t": "thin",
+      "r": "thin",
+      "b": "thin",
+      "l": "thin"
+     }
+    }
+   },
+   "12,3": {
+    "value": "",
+    "style": {
+     "sizePt": 9,
+     "vAlign": "top",
+     "wrap": true,
+     "border": {
+      "t": "thin",
+      "r": "thin",
+      "b": "thin",
+      "l": "thin"
+     }
+    }
+   },
+   "12,4": {
+    "value": "",
+    "style": {
+     "sizePt": 9,
+     "vAlign": "top",
+     "wrap": true,
+     "border": {
+      "t": "thin",
+      "r": "thin",
+      "b": "thin",
+      "l": "thin"
+     }
+    }
+   },
+   "12,5": {
+    "value": "",
+    "style": {
+     "sizePt": 9,
+     "vAlign": "top",
+     "wrap": true,
+     "border": {
+      "t": "thin",
+      "r": "thin",
+      "b": "thin",
+      "l": "thin"
+     }
+    }
+   },
+   "12,6": {
+    "value": "",
+    "style": {
+     "sizePt": 9,
+     "vAlign": "top",
+     "wrap": true,
+     "border": {
+      "t": "thin",
+      "r": "thin",
+      "b": "thin",
+      "l": "thin"
+     }
+    }
+   },
+   "12,7": {
+    "value": "",
+    "style": {
+     "sizePt": 9,
+     "vAlign": "top",
+     "wrap": true,
+     "border": {
+      "t": "thin",
+      "r": "thin",
+      "b": "thin",
+      "l": "thin"
+     }
+    }
+   },
+   "12,8": {
+    "value": "",
+    "style": {
+     "sizePt": 9,
+     "vAlign": "top",
+     "wrap": true,
+     "border": {
+      "t": "thin",
+      "r": "thin",
+      "b": "thin",
+      "l": "thin"
+     }
+    }
+   },
+   "12,9": {
+    "value": "",
+    "style": {
+     "sizePt": 9,
+     "vAlign": "top",
+     "wrap": true,
+     "border": {
+      "t": "thin",
+      "r": "thin",
+      "b": "thin",
+      "l": "thin"
+     }
+    }
+   },
+   "12,10": {
+    "value": "",
+    "style": {
+     "sizePt": 9,
+     "vAlign": "top",
+     "wrap": true,
+     "border": {
+      "t": "thin",
+      "r": "thin",
+      "b": "thin",
+      "l": "thin"
+     }
+    }
+   },
+   "12,11": {
+    "value": "",
+    "style": {
+     "sizePt": 9,
+     "vAlign": "top",
+     "wrap": true,
+     "border": {
+      "t": "thin",
+      "r": "thin",
+      "b": "thin",
+      "l": "thin"
+     }
+    }
+   },
+   "12,12": {
+    "value": "",
+    "style": {
+     "sizePt": 9,
+     "vAlign": "top",
+     "wrap": true,
+     "border": {
+      "t": "thin",
+      "r": "thin",
+      "b": "thin",
+      "l": "thin"
+     }
+    }
+   },
+   "12,13": {
+    "value": "",
+    "style": {
+     "sizePt": 9,
+     "vAlign": "top",
+     "wrap": true,
+     "border": {
+      "t": "thin",
+      "r": "thin",
+      "b": "thin",
+      "l": "thin"
+     }
+    }
+   },
+   "12,14": {
+    "value": "",
+    "style": {
+     "sizePt": 9,
+     "vAlign": "top",
+     "wrap": true,
+     "border": {
+      "t": "thin",
+      "r": "thin",
+      "b": "thin",
+      "l": "thin"
+     }
+    }
+   },
+   "12,15": {
+    "value": "",
+    "style": {
+     "sizePt": 9,
+     "vAlign": "top",
+     "wrap": true,
+     "border": {
+      "t": "thin",
+      "r": "thin",
+      "b": "thin",
+      "l": "thin"
+     }
+    }
+   },
+   "14,0": {
     "value": "判定基準：電気設備技術基準 第58条（使用電圧300V以下かつ対地電圧150V以下：0.1MΩ以上／300V以下でその他：0.2MΩ以上／300V超：0.4MΩ以上）",
     "style": {
      "sizePt": 7,
@@ -1279,7 +1874,7 @@
      "wrap": true
     }
    },
-   "12,0": {
+   "15,0": {
     "value": "測定値の表記：「>2000」は測定範囲上限超過、「-」は測定対象外を示す。判定は各回路の測定値の最小値で行う。",
     "style": {
      "sizePt": 7
@@ -1386,25 +1981,25 @@
    {
     "r1": 10,
     "c1": 0,
-    "r2": 10,
-    "c2": 2
+    "r2": 12,
+    "c2": 1
    },
    {
     "r1": 10,
-    "c1": 3,
-    "r2": 10,
-    "c2": 5
-   },
-   {
-    "r1": 11,
-    "c1": 0,
-    "r2": 11,
+    "c1": 2,
+    "r2": 12,
     "c2": 15
    },
    {
-    "r1": 12,
+    "r1": 14,
     "c1": 0,
-    "r2": 12,
+    "r2": 14,
+    "c2": 15
+   },
+   {
+    "r1": 15,
+    "c1": 0,
+    "r2": 15,
     "c2": 15
    }
   ],

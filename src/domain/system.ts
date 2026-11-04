@@ -19,6 +19,12 @@ export function parseVoltage(input: string): number | undefined {
   return Math.max(...parts.map(Number));
 }
 
+/** 「105/210」のように2つ書かれた電圧は、その表記（半角・Vなし）を返す。それ以外は undefined */
+export function voltageLabel(input: string): string | undefined {
+  const parts = toHalf(input).replace(/[,\s]/g, '').replace(/(V|ボルト)$/i, '').split('/');
+  return parts.length === 2 && parts.every((x) => /^\d+(\.\d+)?$/.test(x)) ? `${parts[0]}/${parts[1]}` : undefined;
+}
+
 /** 電気方式の表記ゆれ（1Φ3W, 1P3W, 1ファイ3, 単相3線 等）を正規化する */
 export function normalizeSystem(s: string): WiringSystem | null {
   const t = toHalf(s).replace(/\s/g, '');

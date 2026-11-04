@@ -32,6 +32,7 @@ export function deriveReport(src: Report, mode: 'copy' | 'inherit'): Report {
   if (mode === 'inherit') {
     delete base.tempC;
     delete base.humidity;
+    delete base.note;
   }
   return base;
 }

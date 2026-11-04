@@ -8,13 +8,15 @@
  */
 import type { WiringSystem } from '../shared/schema.ts';
 import { LOW_VOLTAGE_MAX_V } from './judgment.ts';
-import { normalizeSystem, parseVoltage, toHalf } from './system.ts';
+import { normalizeSystem, parseVoltage, toHalf, voltageLabel } from './system.ts';
 
 export interface PastedCircuit {
   no: string;
   name: string;
   system: WiringSystem;
   useVoltage: number;
+  /** 「105/210」のように書かれていたときの表記 */
+  voltageLabel?: string;
   breakerA?: number;
   /** 既定値を使った項目（画面で薄く表示する） */
   defaulted: ('system' | 'useVoltage')[];
@@ -80,6 +82,7 @@ export function parsePastedCircuits(text: string, defaults: PasteDefaults): Past
       name,
       system,
       useVoltage: volt,
+      ...(voltText && voltageLabel(voltText) ? { voltageLabel: voltageLabel(voltText)! } : {}),
       ...(at !== undefined ? { breakerA: at } : {}),
       defaulted: [...(sysText ? [] : (['system'] as const)), ...(voltText ? [] : (['useVoltage'] as const))],
     });

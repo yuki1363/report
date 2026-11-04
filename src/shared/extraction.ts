@@ -71,6 +71,7 @@ export const ConfirmPanelSchema = z.object({
       name: z.string(),
       system: WiringSystemSchema,
       useVoltage: z.number().positive(),
+      voltageLabel: z.string().optional(),
       breakerA: z.number().nonnegative().optional(),
     }),
   ),

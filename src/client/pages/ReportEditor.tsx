@@ -2,9 +2,9 @@ import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 're
 import type { CircuitComparison, PreviousComparison } from '../../domain/compare.ts';
 import { autoGroundVoltage, DEFAULT_USE_VOLTAGE } from '../../domain/groundVoltage.ts';
 import { defaultTestVoltage } from '../../domain/importing.ts';
-import { parseVoltage } from '../../domain/system.ts';
+import { parseVoltage, voltageLabel } from '../../domain/system.ts';
 import { isLowVoltage, LOW_VOLTAGE_MAX_V } from '../../domain/judgment.ts';
-import { judgeCircuit, judgePanel, VERDICT_LABEL, type Verdict } from '../../domain/judgment.ts';
+import { judgeCircuit, VERDICT_LABEL, type Verdict } from '../../domain/judgment.ts';
 import { formatReading, parseReading } from '../../domain/reading.ts';
 import {
   READING_KEYS,
@@ -165,8 +165,6 @@ export function ReportEditor({ id }: { id: string }) {
   if (error && !report) return <p className="error">{error}</p>;
   if (!report) return <p>読み込み中…</p>;
 
-  const panelVerdict = judgePanel(report.circuits);
-
   const leaveFormat = () => !(tab === 'format' && formatDirty) || confirm('書式の変更が保存されていません。破棄して移動しますか？');
 
   const openPreview = async () => {
@@ -210,7 +208,7 @@ export function ReportEditor({ id }: { id: string }) {
         <span className={`save save-${saveState}`}>
           {{ saved: '保存済み', dirty: '未保存…', saving: '保存中…', error: '保存エラー' }[saveState]}
         </span>
-        <span className={`verdict big v-${panelVerdict}`}>総合判定: {VERDICT_LABEL[panelVerdict]}</span>
+
         <div className="spacer" />
         <div className="tabs">
           <button className={tab === 'input' ? 'active' : ''} onClick={() => leaveFormat() && setTab('input')}>
@@ -351,6 +349,7 @@ export function ReportEditor({ id }: { id: string }) {
                   name: c.name,
                   system: c.system,
                   useVoltage: c.useVoltage,
+                  ...(c.voltageLabel ? { voltageLabel: c.voltageLabel } : {}),
                   groundVoltage: autoGroundVoltage(c.system, c.useVoltage),
                   testVoltage: defaultTestVoltage(c.useVoltage),
                   ...(c.breakerA !== undefined ? { breakerA: c.breakerA } : {}),
@@ -439,6 +438,19 @@ function HeaderForm({
         湿度[%]
         <NumInput value={report.humidity} onChange={(v) => update((r) => withOpt(r, 'humidity', v))} />
       </label>
+      <label className="wide">
+        備考（帳票の備考欄に出ます）
+        <textarea
+          rows={3}
+          value={report.note ?? ''}
+          onChange={(e) =>
+            update((r) => {
+              const { note: _n, ...rest } = r;
+              return e.target.value ? { ...rest, note: e.target.value } : rest;
+            })
+          }
+        />
+      </label>
     </fieldset>
   );
 }
@@ -477,6 +489,45 @@ function NumInput({
         setText(e.target.value);
         const n = optNum(e.target.value);
         if (e.target.value.trim() === '' || n !== undefined) onChange(n);
+      }}
+    />
+  );
+}
+
+/**
+ * 使用電圧の入力欄。「210」のほか「105/210」のように書ける（使用電圧は大きい方。帳票には書いた表記を出す）。
+ * 打っている途中の文字（「105/」など）は、そのまま表示する。
+ */
+function VoltageInput({
+  shown,
+  onCommit,
+  className,
+  ...rest
+}: { shown: string; onCommit: (text: string) => void; className?: string } & Record<string, unknown>) {
+  const [text, setText] = useState(shown);
+  const focused = useRef(false);
+  useEffect(() => {
+    if (!focused.current) setText(shown);
+  }, [shown]);
+  const v = parseVoltage(text);
+  const invalid = text.trim() !== '' && (v === undefined || Number.isNaN(v));
+  return (
+    <input
+      {...rest}
+      className={`${className ?? ''} ${invalid ? 'invalid' : ''}`}
+      value={text}
+      title="例: 200 ／ 105/210（使用電圧は大きい方の 210V）"
+      onFocus={(e) => {
+        focused.current = true;
+        e.target.select();
+      }}
+      onBlur={() => {
+        focused.current = false;
+        setText(shown);
+      }}
+      onChange={(e) => {
+        setText(e.target.value);
+        onCommit(e.target.value);
       }}
     />
   );
@@ -653,13 +704,19 @@ function CircuitGrid({
                   </select>
                 </td>
                 <td>
-                  <NumInput
+                  <VoltageInput
                     className={`volt ${isLowVoltage(c.useVoltage) ? '' : 'invalid'}`}
-                    value={c.useVoltage}
+                    shown={c.voltageLabel ?? String(c.useVoltage)}
                     {...cellProps(i, 'useVoltage')}
-                    onChange={(v) =>
-                      updateCircuit(c.id, (x) => ({ ...x, useVoltage: v ?? 0, groundVoltage: autoGroundVoltage(x.system, v ?? 0) }))
-                    }
+                    onCommit={(text) => {
+                      const v = parseVoltage(text);
+                      if (v === undefined || Number.isNaN(v)) return;
+                      const label = voltageLabel(text);
+                      updateCircuit(c.id, (x) => {
+                        const { voltageLabel: _l, ...rest } = x;
+                        return { ...rest, ...(label ? { voltageLabel: label } : {}), useVoltage: v, groundVoltage: autoGroundVoltage(x.system, v) };
+                      });
+                    }}
                   />
                 </td>
                 {showVolt && (
@@ -765,5 +822,6 @@ function PrevCell({ cmp }: { cmp: CircuitComparison | undefined }) {
 }
 
 function VerdictBadge({ v }: { v: Verdict }) {
+  if (v === 'none') return null; // 判定していない回路は空欄
   return <span className={`verdict v-${v}`}>{VERDICT_LABEL[v]}</span>;
 }

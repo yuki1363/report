@@ -25,7 +25,8 @@ export type Verdict = 'good' | 'bad' | 'none';
 export const VERDICT_LABEL: Record<Verdict, string> = {
   good: '良',
   bad: '否',
-  none: '未判定',
+  /** 測定値が無い（判定していない）ときは文字を出さず空欄にする */
+  none: '',
 };
 
 export interface CriterionResult {
@@ -70,7 +71,7 @@ export function measuredReadings(circuit: Pick<Circuit, 'readings'>): (Reading &
   return out;
 }
 
-/** 回路の判定。測定値の最小値で判定し、測定値が1つも無ければ「未判定」。 */
+/** 回路の判定。測定値の最小値で判定し、測定値が1つも無ければ判定なし（none。表示は空欄）。 */
 export function judgeCircuit(
   circuit: Pick<Circuit, 'readings' | 'useVoltage' | 'groundVoltage'>,
   criteria: Criteria = DEFAULT_CRITERIA,
@@ -91,17 +92,15 @@ export function judgeCircuit(
 /**
  * 盤全体の判定。
  * - 1回路でも「否」があれば「否」
- * - 「否」が無く、全回路が「良」なら「良」
- * - 「否」が無く、未判定の回路を含む場合は「未判定」（安全側。確認事項として要確認）
- * - 回路が0件なら「未判定」
+ * - 「否」が無く、判定できた回路（良）が1つでもあれば「良」（測定しない回路・予備は無視する）
+ * - 判定できた回路が1つも無ければ none（表示は空欄）
  */
 export function judgePanel(
   circuits: Pick<Circuit, 'readings' | 'useVoltage' | 'groundVoltage'>[],
   criteria: Criteria = DEFAULT_CRITERIA,
 ): Verdict {
-  if (circuits.length === 0) return 'none';
   const verdicts = circuits.map((c) => judgeCircuit(c, criteria).verdict);
   if (verdicts.includes('bad')) return 'bad';
-  if (verdicts.every((v) => v === 'good')) return 'good';
+  if (verdicts.includes('good')) return 'good';
   return 'none';
 }

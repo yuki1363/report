@@ -9,9 +9,9 @@ import { READING_KEYS, READING_LABELS, TemplateSchema, type Cell, type CellStyle
 
 const cols = [
   8, // 0 No
-  40, // 1 回路名称
+  37, // 1 回路名称
   12, // 2 電気方式
-  10, // 3 使用電圧
+  13, // 3 使用電圧（「105/210」の表記が入る）
   9.5, 9.5, 9.5, 9.5, 9.5, 9.5, 9.5, 9.5, // 4-11 測定値
   11, // 12 最小値
   10, // 13 基準値
@@ -81,7 +81,7 @@ const C: CellStyle = { border: all, sizePt: 8 };
 set(8, 0, '{{c.no}}', { ...C, hAlign: 'center' });
 set(8, 1, '{{c.name}}', { ...C, shrinkToFit: true });
 set(8, 2, '{{c.system}}', { ...C, hAlign: 'center' });
-set(8, 3, '{{c.useVoltage}}', { ...C, hAlign: 'right' });
+set(8, 3, '{{c.useVoltage}}', { ...C, hAlign: 'right', shrinkToFit: true });
 READING_KEYS.forEach((k, i) => set(8, 4 + i, `{{c.${k}}}`, { ...C, hAlign: 'right', shrinkToFit: true }));
 set(8, 12, '{{c.min}}', { ...C, hAlign: 'right', shrinkToFit: true });
 set(8, 13, '{{c.criterion}}', { ...C, hAlign: 'right' });
@@ -90,16 +90,18 @@ set(8, 15, '{{c.note}}', { ...C, shrinkToFit: true });
 
 // 9: 余白
 rows.push(4);
-// 10: 総合判定
-rows.push(8);
-boxed(10, 0, 10, 2, '総合判定', { hAlign: 'center', bold: true, fill: '#EEEEEE', sizePt: 10 });
-boxed(10, 3, 10, 5, '{{report.judgment}}', { hAlign: 'center', bold: true, sizePt: 12 });
-// 11-12: 注記
+// 10-12: 備考欄（大きめ。総合判定は載せない）
+rows.push(10, 10, 10);
+boxed(10, 0, 12, 1, '備考', { hAlign: 'center', bold: true, fill: '#EEEEEE', sizePt: 10 });
+boxed(10, 2, 12, LAST, '{{report.note}}', { sizePt: 9, wrap: true, vAlign: 'top' });
+// 13: 余白
+rows.push(3);
+// 14-15: 注記
 rows.push(8, 5); // 注記1は2行に折り返す
-set(11, 0, '判定基準：電気設備技術基準 第58条（使用電圧300V以下かつ対地電圧150V以下：0.1MΩ以上／300V以下でその他：0.2MΩ以上／300V超：0.4MΩ以上）', { sizePt: 7, wrap: true, vAlign: 'top' });
-merge(11, 0, 11, LAST);
-set(12, 0, '測定値の表記：「>2000」は測定範囲上限超過、「-」は測定対象外を示す。判定は各回路の測定値の最小値で行う。', { sizePt: 7 });
-merge(12, 0, 12, LAST);
+set(14, 0, '判定基準：電気設備技術基準 第58条（使用電圧300V以下かつ対地電圧150V以下：0.1MΩ以上／300V以下でその他：0.2MΩ以上／300V超：0.4MΩ以上）', { sizePt: 7, wrap: true, vAlign: 'top' });
+merge(14, 0, 14, LAST);
+set(15, 0, '測定値の表記：「>2000」は測定範囲上限超過、「-」は測定対象外を示す。判定は各回路の測定値の最小値で行う。', { sizePt: 7 });
+merge(15, 0, 15, LAST);
 
 const sheet: Sheet = {
   page: { size: 'A4', orientation: 'portrait', marginsMm: { t: 10, r: 8, b: 10, l: 8 }, repeatHeaderRows: [6, 7] },

@@ -15,8 +15,9 @@ describe('空欄の書式', () => {
     expect(s.cells['2,0']!.value).toBe('盤名：');
     expect(JSON.stringify(s.cells)).not.toContain('{{');
     expect(s.page.repeatHeaderRows).toEqual([6, 7]);
-    // 総合判定は回路行の後ろにずれる
-    expect(s.cells['29,0']!.value).toBe('総合判定');
+    // 備考欄は回路行の後ろにずれる
+    expect(s.cells['29,0']!.value).toBe('備考');
+    expect(JSON.stringify(s.cells)).not.toContain('総合判定');
   });
   it('1行でも動き、元のテンプレートは変更しない', () => {
     const before = JSON.stringify(tpl);
