@@ -11,7 +11,7 @@ describe('空欄の書式', () => {
     expect(s.rowHeightsMm.length).toBe(tpl.rowHeightsMm.length + 19);
     expect(s.repeatRegion).toBeUndefined();
     expect(s.cells['8,0']!.style?.border).toBeDefined();
-    expect(s.cells['27,15']!.style?.border).toBeDefined(); // 20行目の最終列
+    expect(s.cells['27,13']!.style?.border).toBeDefined(); // 20行目の最終列
     expect(s.cells['2,0']!.value).toBe('盤名：');
     expect(JSON.stringify(s.cells)).not.toContain('{{');
     expect(s.page.repeatHeaderRows).toEqual([6, 7]);

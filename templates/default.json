@@ -17,11 +17,9 @@
    ]
   },
   "colWidthsMm": [
-   39,
+   55,
    10,
    10,
-   12,
-   13,
    9.5,
    9.5,
    9.5,
@@ -32,7 +30,7 @@
    9.5,
    10,
    9,
-   15
+   24
   ],
   "rowHeightsMm": [
    12,
@@ -120,18 +118,18 @@
     }
    },
    "2,7": {
-    "value": "",
+    "value": "測定日：{{report.date}}",
     "style": {
+     "sizePt": 10,
+     "shrinkToFit": true,
      "border": {
       "b": "thin"
      }
     }
    },
    "2,8": {
-    "value": "測定日：{{report.date}}",
+    "value": "",
     "style": {
-     "sizePt": 10,
-     "shrinkToFit": true,
      "border": {
       "b": "thin"
      }
@@ -170,22 +168,6 @@
     }
    },
    "2,13": {
-    "value": "",
-    "style": {
-     "border": {
-      "b": "thin"
-     }
-    }
-   },
-   "2,14": {
-    "value": "",
-    "style": {
-     "border": {
-      "b": "thin"
-     }
-    }
-   },
-   "2,15": {
     "value": "",
     "style": {
      "border": {
@@ -252,18 +234,18 @@
     }
    },
    "3,7": {
-    "value": "",
+    "value": "温度：{{report.tempC}} ℃　湿度：{{report.humidity}} %",
     "style": {
+     "sizePt": 10,
+     "shrinkToFit": true,
      "border": {
       "b": "thin"
      }
     }
    },
    "3,8": {
-    "value": "温度：{{report.tempC}} ℃　湿度：{{report.humidity}} %",
+    "value": "",
     "style": {
-     "sizePt": 10,
-     "shrinkToFit": true,
      "border": {
       "b": "thin"
      }
@@ -302,22 +284,6 @@
     }
    },
    "3,13": {
-    "value": "",
-    "style": {
-     "border": {
-      "b": "thin"
-     }
-    }
-   },
-   "3,14": {
-    "value": "",
-    "style": {
-     "border": {
-      "b": "thin"
-     }
-    }
-   },
-   "3,15": {
     "value": "",
     "style": {
      "border": {
@@ -386,6 +352,8 @@
    "4,7": {
     "value": "",
     "style": {
+     "sizePt": 10,
+     "shrinkToFit": true,
      "border": {
       "b": "thin"
      }
@@ -394,8 +362,6 @@
    "4,8": {
     "value": "",
     "style": {
-     "sizePt": 10,
-     "shrinkToFit": true,
      "border": {
       "b": "thin"
      }
@@ -434,22 +400,6 @@
     }
    },
    "4,13": {
-    "value": "",
-    "style": {
-     "border": {
-      "b": "thin"
-     }
-    }
-   },
-   "4,14": {
-    "value": "",
-    "style": {
-     "border": {
-      "b": "thin"
-     }
-    }
-   },
-   "4,15": {
     "value": "",
     "style": {
      "border": {
@@ -554,23 +504,7 @@
     }
    },
    "6,3": {
-    "value": "電気\n方式",
-    "style": {
-     "sizePt": 7,
-     "bold": true,
-     "hAlign": "center",
-     "wrap": true,
-     "fill": "#EEEEEE",
-     "border": {
-      "t": "thin",
-      "r": "thin",
-      "b": "thin",
-      "l": "thin"
-     }
-    }
-   },
-   "7,3": {
-    "value": "",
+    "value": "絶縁抵抗値 [MΩ]",
     "style": {
      "sizePt": 7,
      "bold": true,
@@ -586,22 +520,6 @@
     }
    },
    "6,4": {
-    "value": "使用\n電圧\n[V]",
-    "style": {
-     "sizePt": 7,
-     "bold": true,
-     "hAlign": "center",
-     "wrap": true,
-     "fill": "#EEEEEE",
-     "border": {
-      "t": "thin",
-      "r": "thin",
-      "b": "thin",
-      "l": "thin"
-     }
-    }
-   },
-   "7,4": {
     "value": "",
     "style": {
      "sizePt": 7,
@@ -618,7 +536,7 @@
     }
    },
    "6,5": {
-    "value": "絶縁抵抗値 [MΩ]",
+    "value": "",
     "style": {
      "sizePt": 7,
      "bold": true,
@@ -713,7 +631,151 @@
      }
     }
    },
+   "7,3": {
+    "value": "R-S",
+    "style": {
+     "sizePt": 7,
+     "bold": true,
+     "hAlign": "center",
+     "wrap": true,
+     "fill": "#EEEEEE",
+     "border": {
+      "t": "thin",
+      "r": "thin",
+      "b": "thin",
+      "l": "thin"
+     }
+    }
+   },
+   "7,4": {
+    "value": "S-T",
+    "style": {
+     "sizePt": 7,
+     "bold": true,
+     "hAlign": "center",
+     "wrap": true,
+     "fill": "#EEEEEE",
+     "border": {
+      "t": "thin",
+      "r": "thin",
+      "b": "thin",
+      "l": "thin"
+     }
+    }
+   },
+   "7,5": {
+    "value": "T-R",
+    "style": {
+     "sizePt": 7,
+     "bold": true,
+     "hAlign": "center",
+     "wrap": true,
+     "fill": "#EEEEEE",
+     "border": {
+      "t": "thin",
+      "r": "thin",
+      "b": "thin",
+      "l": "thin"
+     }
+    }
+   },
+   "7,6": {
+    "value": "R-E",
+    "style": {
+     "sizePt": 7,
+     "bold": true,
+     "hAlign": "center",
+     "wrap": true,
+     "fill": "#EEEEEE",
+     "border": {
+      "t": "thin",
+      "r": "thin",
+      "b": "thin",
+      "l": "thin"
+     }
+    }
+   },
+   "7,7": {
+    "value": "S-E",
+    "style": {
+     "sizePt": 7,
+     "bold": true,
+     "hAlign": "center",
+     "wrap": true,
+     "fill": "#EEEEEE",
+     "border": {
+      "t": "thin",
+      "r": "thin",
+      "b": "thin",
+      "l": "thin"
+     }
+    }
+   },
+   "7,8": {
+    "value": "T-E",
+    "style": {
+     "sizePt": 7,
+     "bold": true,
+     "hAlign": "center",
+     "wrap": true,
+     "fill": "#EEEEEE",
+     "border": {
+      "t": "thin",
+      "r": "thin",
+      "b": "thin",
+      "l": "thin"
+     }
+    }
+   },
+   "7,9": {
+    "value": "N-E",
+    "style": {
+     "sizePt": 7,
+     "bold": true,
+     "hAlign": "center",
+     "wrap": true,
+     "fill": "#EEEEEE",
+     "border": {
+      "t": "thin",
+      "r": "thin",
+      "b": "thin",
+      "l": "thin"
+     }
+    }
+   },
+   "7,10": {
+    "value": "一括-E",
+    "style": {
+     "sizePt": 7,
+     "bold": true,
+     "hAlign": "center",
+     "wrap": true,
+     "fill": "#EEEEEE",
+     "border": {
+      "t": "thin",
+      "r": "thin",
+      "b": "thin",
+      "l": "thin"
+     }
+    }
+   },
    "6,11": {
+    "value": "基準値\n[MΩ]",
+    "style": {
+     "sizePt": 7,
+     "bold": true,
+     "hAlign": "center",
+     "wrap": true,
+     "fill": "#EEEEEE",
+     "border": {
+      "t": "thin",
+      "r": "thin",
+      "b": "thin",
+      "l": "thin"
+     }
+    }
+   },
+   "7,11": {
     "value": "",
     "style": {
      "sizePt": 7,
@@ -730,182 +792,6 @@
     }
    },
    "6,12": {
-    "value": "",
-    "style": {
-     "sizePt": 7,
-     "bold": true,
-     "hAlign": "center",
-     "wrap": true,
-     "fill": "#EEEEEE",
-     "border": {
-      "t": "thin",
-      "r": "thin",
-      "b": "thin",
-      "l": "thin"
-     }
-    }
-   },
-   "7,5": {
-    "value": "R-S",
-    "style": {
-     "sizePt": 7,
-     "bold": true,
-     "hAlign": "center",
-     "wrap": true,
-     "fill": "#EEEEEE",
-     "border": {
-      "t": "thin",
-      "r": "thin",
-      "b": "thin",
-      "l": "thin"
-     }
-    }
-   },
-   "7,6": {
-    "value": "S-T",
-    "style": {
-     "sizePt": 7,
-     "bold": true,
-     "hAlign": "center",
-     "wrap": true,
-     "fill": "#EEEEEE",
-     "border": {
-      "t": "thin",
-      "r": "thin",
-      "b": "thin",
-      "l": "thin"
-     }
-    }
-   },
-   "7,7": {
-    "value": "T-R",
-    "style": {
-     "sizePt": 7,
-     "bold": true,
-     "hAlign": "center",
-     "wrap": true,
-     "fill": "#EEEEEE",
-     "border": {
-      "t": "thin",
-      "r": "thin",
-      "b": "thin",
-      "l": "thin"
-     }
-    }
-   },
-   "7,8": {
-    "value": "R-E",
-    "style": {
-     "sizePt": 7,
-     "bold": true,
-     "hAlign": "center",
-     "wrap": true,
-     "fill": "#EEEEEE",
-     "border": {
-      "t": "thin",
-      "r": "thin",
-      "b": "thin",
-      "l": "thin"
-     }
-    }
-   },
-   "7,9": {
-    "value": "S-E",
-    "style": {
-     "sizePt": 7,
-     "bold": true,
-     "hAlign": "center",
-     "wrap": true,
-     "fill": "#EEEEEE",
-     "border": {
-      "t": "thin",
-      "r": "thin",
-      "b": "thin",
-      "l": "thin"
-     }
-    }
-   },
-   "7,10": {
-    "value": "T-E",
-    "style": {
-     "sizePt": 7,
-     "bold": true,
-     "hAlign": "center",
-     "wrap": true,
-     "fill": "#EEEEEE",
-     "border": {
-      "t": "thin",
-      "r": "thin",
-      "b": "thin",
-      "l": "thin"
-     }
-    }
-   },
-   "7,11": {
-    "value": "N-E",
-    "style": {
-     "sizePt": 7,
-     "bold": true,
-     "hAlign": "center",
-     "wrap": true,
-     "fill": "#EEEEEE",
-     "border": {
-      "t": "thin",
-      "r": "thin",
-      "b": "thin",
-      "l": "thin"
-     }
-    }
-   },
-   "7,12": {
-    "value": "一括-E",
-    "style": {
-     "sizePt": 7,
-     "bold": true,
-     "hAlign": "center",
-     "wrap": true,
-     "fill": "#EEEEEE",
-     "border": {
-      "t": "thin",
-      "r": "thin",
-      "b": "thin",
-      "l": "thin"
-     }
-    }
-   },
-   "6,13": {
-    "value": "基準値\n[MΩ]",
-    "style": {
-     "sizePt": 7,
-     "bold": true,
-     "hAlign": "center",
-     "wrap": true,
-     "fill": "#EEEEEE",
-     "border": {
-      "t": "thin",
-      "r": "thin",
-      "b": "thin",
-      "l": "thin"
-     }
-    }
-   },
-   "7,13": {
-    "value": "",
-    "style": {
-     "sizePt": 7,
-     "bold": true,
-     "hAlign": "center",
-     "wrap": true,
-     "fill": "#EEEEEE",
-     "border": {
-      "t": "thin",
-      "r": "thin",
-      "b": "thin",
-      "l": "thin"
-     }
-    }
-   },
-   "6,14": {
     "value": "判定",
     "style": {
      "sizePt": 7,
@@ -921,7 +807,7 @@
      }
     }
    },
-   "7,14": {
+   "7,12": {
     "value": "",
     "style": {
      "sizePt": 7,
@@ -937,7 +823,7 @@
      }
     }
    },
-   "6,15": {
+   "6,13": {
     "value": "備考",
     "style": {
      "sizePt": 7,
@@ -953,7 +839,7 @@
      }
     }
    },
-   "7,15": {
+   "7,13": {
     "value": "",
     "style": {
      "sizePt": 7,
@@ -1011,33 +897,6 @@
     }
    },
    "8,3": {
-    "value": "{{c.system}}",
-    "style": {
-     "sizePt": 8,
-     "hAlign": "center",
-     "border": {
-      "t": "thin",
-      "r": "thin",
-      "b": "thin",
-      "l": "thin"
-     }
-    }
-   },
-   "8,4": {
-    "value": "{{c.useVoltage}}",
-    "style": {
-     "sizePt": 8,
-     "hAlign": "right",
-     "shrinkToFit": true,
-     "border": {
-      "t": "thin",
-      "r": "thin",
-      "b": "thin",
-      "l": "thin"
-     }
-    }
-   },
-   "8,5": {
     "value": "{{c.RS}}",
     "style": {
      "sizePt": 8,
@@ -1051,7 +910,7 @@
      }
     }
    },
-   "8,6": {
+   "8,4": {
     "value": "{{c.ST}}",
     "style": {
      "sizePt": 8,
@@ -1065,7 +924,7 @@
      }
     }
    },
-   "8,7": {
+   "8,5": {
     "value": "{{c.TR}}",
     "style": {
      "sizePt": 8,
@@ -1079,7 +938,7 @@
      }
     }
    },
-   "8,8": {
+   "8,6": {
     "value": "{{c.RE}}",
     "style": {
      "sizePt": 8,
@@ -1093,7 +952,7 @@
      }
     }
    },
-   "8,9": {
+   "8,7": {
     "value": "{{c.SE}}",
     "style": {
      "sizePt": 8,
@@ -1107,7 +966,7 @@
      }
     }
    },
-   "8,10": {
+   "8,8": {
     "value": "{{c.TE}}",
     "style": {
      "sizePt": 8,
@@ -1121,7 +980,7 @@
      }
     }
    },
-   "8,11": {
+   "8,9": {
     "value": "{{c.NE}}",
     "style": {
      "sizePt": 8,
@@ -1135,7 +994,7 @@
      }
     }
    },
-   "8,12": {
+   "8,10": {
     "value": "{{c.ALL_E}}",
     "style": {
      "sizePt": 8,
@@ -1149,7 +1008,7 @@
      }
     }
    },
-   "8,13": {
+   "8,11": {
     "value": "{{c.criterion}}",
     "style": {
      "sizePt": 8,
@@ -1162,7 +1021,7 @@
      }
     }
    },
-   "8,14": {
+   "8,12": {
     "value": "{{c.judgment}}",
     "style": {
      "sizePt": 8,
@@ -1176,7 +1035,7 @@
      }
     }
    },
-   "8,15": {
+   "8,13": {
     "value": "{{c.note}}",
     "style": {
      "sizePt": 8,
@@ -1447,34 +1306,6 @@
      }
     }
    },
-   "10,14": {
-    "value": "",
-    "style": {
-     "sizePt": 9,
-     "vAlign": "top",
-     "wrap": true,
-     "border": {
-      "t": "thin",
-      "r": "thin",
-      "b": "thin",
-      "l": "thin"
-     }
-    }
-   },
-   "10,15": {
-    "value": "",
-    "style": {
-     "sizePt": 9,
-     "vAlign": "top",
-     "wrap": true,
-     "border": {
-      "t": "thin",
-      "r": "thin",
-      "b": "thin",
-      "l": "thin"
-     }
-    }
-   },
    "11,2": {
     "value": "",
     "style": {
@@ -1630,34 +1461,6 @@
     }
    },
    "11,13": {
-    "value": "",
-    "style": {
-     "sizePt": 9,
-     "vAlign": "top",
-     "wrap": true,
-     "border": {
-      "t": "thin",
-      "r": "thin",
-      "b": "thin",
-      "l": "thin"
-     }
-    }
-   },
-   "11,14": {
-    "value": "",
-    "style": {
-     "sizePt": 9,
-     "vAlign": "top",
-     "wrap": true,
-     "border": {
-      "t": "thin",
-      "r": "thin",
-      "b": "thin",
-      "l": "thin"
-     }
-    }
-   },
-   "11,15": {
     "value": "",
     "style": {
      "sizePt": 9,
@@ -1839,34 +1642,6 @@
      }
     }
    },
-   "12,14": {
-    "value": "",
-    "style": {
-     "sizePt": 9,
-     "vAlign": "top",
-     "wrap": true,
-     "border": {
-      "t": "thin",
-      "r": "thin",
-      "b": "thin",
-      "l": "thin"
-     }
-    }
-   },
-   "12,15": {
-    "value": "",
-    "style": {
-     "sizePt": 9,
-     "vAlign": "top",
-     "wrap": true,
-     "border": {
-      "t": "thin",
-      "r": "thin",
-      "b": "thin",
-      "l": "thin"
-     }
-    }
-   },
    "14,0": {
     "value": "判定基準：電気設備技術基準 第58条（使用電圧300V以下かつ対地電圧150V以下：0.1MΩ以上／300V以下でその他：0.2MΩ以上／300V超：0.4MΩ以上）",
     "style": {
@@ -1887,43 +1662,43 @@
     "r1": 0,
     "c1": 0,
     "r2": 0,
-    "c2": 15
+    "c2": 13
    },
    {
     "r1": 2,
     "c1": 0,
     "r2": 2,
-    "c2": 7
+    "c2": 6
    },
    {
     "r1": 2,
-    "c1": 8,
+    "c1": 7,
     "r2": 2,
-    "c2": 15
+    "c2": 13
    },
    {
     "r1": 3,
     "c1": 0,
     "r2": 3,
-    "c2": 7
+    "c2": 6
    },
    {
     "r1": 3,
-    "c1": 8,
+    "c1": 7,
     "r2": 3,
-    "c2": 15
+    "c2": 13
    },
    {
     "r1": 4,
     "c1": 0,
     "r2": 4,
-    "c2": 7
+    "c2": 6
    },
    {
     "r1": 4,
-    "c1": 8,
+    "c1": 7,
     "r2": 4,
-    "c2": 15
+    "c2": 13
    },
    {
     "r1": 6,
@@ -1946,19 +1721,19 @@
    {
     "r1": 6,
     "c1": 3,
-    "r2": 7,
-    "c2": 3
-   },
-   {
-    "r1": 6,
-    "c1": 4,
-    "r2": 7,
-    "c2": 4
-   },
-   {
-    "r1": 6,
-    "c1": 5,
     "r2": 6,
+    "c2": 10
+   },
+   {
+    "r1": 6,
+    "c1": 11,
+    "r2": 7,
+    "c2": 11
+   },
+   {
+    "r1": 6,
+    "c1": 12,
+    "r2": 7,
     "c2": 12
    },
    {
@@ -1966,18 +1741,6 @@
     "c1": 13,
     "r2": 7,
     "c2": 13
-   },
-   {
-    "r1": 6,
-    "c1": 14,
-    "r2": 7,
-    "c2": 14
-   },
-   {
-    "r1": 6,
-    "c1": 15,
-    "r2": 7,
-    "c2": 15
    },
    {
     "r1": 10,
@@ -1989,19 +1752,19 @@
     "r1": 10,
     "c1": 2,
     "r2": 12,
-    "c2": 15
+    "c2": 13
    },
    {
     "r1": 14,
     "c1": 0,
     "r2": 14,
-    "c2": 15
+    "c2": 13
    },
    {
     "r1": 15,
     "c1": 0,
     "r2": 15,
-    "c2": 15
+    "c2": 13
    }
   ],
   "repeatRegion": {

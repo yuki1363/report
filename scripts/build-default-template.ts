@@ -8,15 +8,13 @@ import { fileURLToPath } from 'node:url';
 import { READING_KEYS, READING_LABELS, TemplateSchema, type Cell, type CellStyle, type Sheet } from '../src/shared/schema.ts';
 
 const cols = [
-  39, // 0 回路名称（回路No の列は載せない。空いた幅を回路名称に）
+  55, // 0 回路名称（回路No・電気方式・使用電圧の列は載せない。空いた幅を回路名称と備考に）
   10, // 1 種別（ELB・MCB・Mg など）
   10, // 2 容量[A]
-  12, // 3 電気方式
-  13, // 4 使用電圧（「105/210」の表記が入る）
-  9.5, 9.5, 9.5, 9.5, 9.5, 9.5, 9.5, 9.5, // 5-12 測定値
-  10, // 13 基準値
-  9, // 14 判定
-  15, // 15 備考
+  9.5, 9.5, 9.5, 9.5, 9.5, 9.5, 9.5, 9.5, // 3-10 測定値
+  10, // 11 基準値
+  9, // 12 判定
+  24, // 13 備考
 ];
 const LAST = cols.length - 1;
 
@@ -46,8 +44,8 @@ rows.push(3);
 const info = (r: number, items: [string, string]) => {
   rows.push(7);
   const ranges: [number, number][] = [
-    [0, 7],
-    [8, LAST],
+    [0, 6],
+    [7, LAST],
   ];
   ranges.forEach(([c1, c2], i) => {
     for (let c = c1; c <= c2; c++) set(r, c, '', { border: { b: 'thin' } });
@@ -67,26 +65,22 @@ const H: CellStyle = { hAlign: 'center', bold: true, fill: '#EEEEEE', wrap: true
 boxed(6, 0, 7, 0, '回路名称', H);
 boxed(6, 1, 7, 1, '種別', H);
 boxed(6, 2, 7, 2, '容量\n[A]', H);
-boxed(6, 3, 7, 3, '電気\n方式', H);
-boxed(6, 4, 7, 4, '使用\n電圧\n[V]', H);
-boxed(6, 5, 6, 12, '絶縁抵抗値 [MΩ]', H);
-READING_KEYS.forEach((k, i) => boxed(7, 5 + i, 7, 5 + i, READING_LABELS[k], H));
-boxed(6, 13, 7, 13, '基準値\n[MΩ]', H);
-boxed(6, 14, 7, 14, '判定', H);
-boxed(6, 15, 7, 15, '備考', H);
+boxed(6, 3, 6, 10, '絶縁抵抗値 [MΩ]', H);
+READING_KEYS.forEach((k, i) => boxed(7, 3 + i, 7, 3 + i, READING_LABELS[k], H));
+boxed(6, 11, 7, 11, '基準値\n[MΩ]', H);
+boxed(6, 12, 7, 12, '判定', H);
+boxed(6, 13, 7, 13, '備考', H);
 
-// 8: 回路行（回路数ぶん繰り返す）。回路No・最小値の列は載せない
+// 8: 回路行（回路数ぶん繰り返す）。回路No・電気方式・使用電圧・最小値の列は載せない（判定は、入力した使用電圧で行う）
 rows.push(7);
 const C: CellStyle = { border: all, sizePt: 8 };
 set(8, 0, '{{c.name}}', { ...C, shrinkToFit: true });
 set(8, 1, '{{c.deviceType}}', { ...C, hAlign: 'center', shrinkToFit: true });
 set(8, 2, '{{c.breakerA}}', { ...C, hAlign: 'right', shrinkToFit: true });
-set(8, 3, '{{c.system}}', { ...C, hAlign: 'center' });
-set(8, 4, '{{c.useVoltage}}', { ...C, hAlign: 'right', shrinkToFit: true });
-READING_KEYS.forEach((k, i) => set(8, 5 + i, `{{c.${k}}}`, { ...C, hAlign: 'right', shrinkToFit: true }));
-set(8, 13, '{{c.criterion}}', { ...C, hAlign: 'right' });
-set(8, 14, '{{c.judgment}}', { ...C, hAlign: 'center', bold: true });
-set(8, 15, '{{c.note}}', { ...C, shrinkToFit: true });
+READING_KEYS.forEach((k, i) => set(8, 3 + i, `{{c.${k}}}`, { ...C, hAlign: 'right', shrinkToFit: true }));
+set(8, 11, '{{c.criterion}}', { ...C, hAlign: 'right' });
+set(8, 12, '{{c.judgment}}', { ...C, hAlign: 'center', bold: true });
+set(8, 13, '{{c.note}}', { ...C, shrinkToFit: true });
 
 // 9: 余白
 rows.push(4);

@@ -26,23 +26,23 @@ describe('Excel 出力', () => {
     expect(ws.pageSetup.orientation).toBe('portrait');
     expect(ws.pageSetup.paperSize).toBe(9);
     expect(ws.pageSetup.printTitlesRow).toBe('7:8');
-    expect(ws.pageSetup.printArea).toBe(`A1:P${sheet.rowHeightsMm.length}`);
+    expect(ws.pageSetup.printArea).toBe(`A1:N${sheet.rowHeightsMm.length}`);
     expect(ws.pageSetup.margins!.left).toBeCloseTo(8 / 25.4, 5); // 左右の余白は 8mm
     expect(ws.pageSetup.margins!.top).toBeCloseTo(10 / 25.4, 5);
     expect(ws.getCell('A1').value).toBe('絶縁抵抗測定報告書');
     expect(ws.getCell('A1').isMerged).toBe(true);
     expect(ws.getRow(9).height).toBeCloseTo(mmToPt(7), 1);
     // 回路行: 数値は数値として、上限超過は文字として書く
-    expect(ws.getCell('I9').value).toBe(100); // R-E
-    expect(ws.getCell('M9').value).toBe('>2000');
-    expect(ws.getCell('O9').value).toBe('良');
+    expect(ws.getCell('G9').value).toBe(100); // R-E
+    expect(ws.getCell('K9').value).toBe('>2000');
+    expect(ws.getCell('M9').value).toBe('良');
     expect(ws.getCell('A9').value).toBe('空調機 AC-1（髙効率）');
     // 結合セル（見出し「回路名称」A7:A8）の外周罫線
     expect(ws.getCell('A8').border.bottom?.style).toBe('thin');
     expect(ws.getCell('A7').border.top?.style).toBe('thin');
     // 判定セルは数式ではなく値
-    expect(typeof ws.getCell('O13').value).toBe('string');
-    expect(ws.getCell('O13').value).toBe('良'); // 5回路目: 1φ3W 対地100V・0.15MΩ → 基準0.1 → 良
+    expect(typeof ws.getCell('M13').value).toBe('string');
+    expect(ws.getCell('M13').value).toBe('良'); // 5回路目: 1φ3W 対地100V・0.15MΩ → 基準0.1 → 良
   });
 });
 
