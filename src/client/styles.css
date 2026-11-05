@@ -221,3 +221,7 @@ table.grid td.del-col input[type=checkbox], table.grid th.sticky-left input[type
 table.grid tr.picked td { background: #eff6ff; }
 table.grid tr.picked td.sticky-left { background: #dbeafe; }
 .grid-footer button.danger { border-color: #fca5a5; background: #fef2f2; }
+
+/* 回路の順番（数字を書き換えて並び替え） */
+table.grid td.order-col { width: 3em; padding: 0 2px; text-align: center; }
+table.grid input.order { width: 2.6em; text-align: center; padding: 2px; }

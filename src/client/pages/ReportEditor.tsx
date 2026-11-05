@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { autoGroundVoltage, DEFAULT_USE_VOLTAGE } from '../../domain/groundVoltage.ts';
 import { defaultTestVoltage } from '../../domain/importing.ts';
+import { moveTo, parseOrder } from '../../domain/reorder.ts';
 import { newCircuit } from '../../domain/newCircuit.ts';
 import { parseVoltage } from '../../domain/system.ts';
 import { applyFreeVoltage, applySystem, patternOf, VOLTAGE_PATTERNS, voltageText } from '../../domain/voltagePattern.ts';
@@ -130,6 +131,9 @@ export function ReportEditor({ id }: { id: string }) {
       [circuits[index], circuits[j]] = [circuits[j]!, circuits[index]!];
       return { ...r, circuits };
     });
+
+  /** 順番の数字で、回路を指定の位置へ移す（from・to は0始まり） */
+  const moveCircuitTo = (from: number, to: number) => update((r) => ({ ...r, circuits: moveTo(r.circuits, from, to) }));
 
   if (error && !report) return <p className="error">{error}</p>;
   if (!report) return <p>読み込み中…</p>;
@@ -282,6 +286,7 @@ export function ReportEditor({ id }: { id: string }) {
             addCircuit={addCircuit}
             removeCircuits={removeCircuits}
             moveCircuit={moveCircuit}
+            moveCircuitTo={moveCircuitTo}
           />
         </>
       )}
@@ -492,18 +497,53 @@ function VoltageInput({
 /** 入力する項目（左から）。測定値は入力しない（帳票の空欄に、手書きで記入する） */
 const COLS = ['name', 'deviceType', 'breakerA', 'system', 'useVoltage'] as const;
 
+/** 順番の入力欄。数字を書き換えて Enter（または欄の外をクリック）すると、その位置へ移る。数字でなければ元に戻す */
+function OrderInput({ index, count, onMove }: { index: number; count: number; onMove: (to: number) => void }) {
+  const [text, setText] = useState(String(index + 1));
+  useEffect(() => setText(String(index + 1)), [index]); // 並びが変わったら、番号も追従
+  const commit = () => {
+    const to = parseOrder(text, count);
+    if (to === undefined || to === index) setText(String(index + 1));
+    else onMove(to);
+  };
+  return (
+    <input
+      className="order"
+      inputMode="numeric"
+      value={text}
+      tabIndex={-1}
+      title="順番。数字を書き換えて Enter で、その位置へ移動"
+      aria-label={`${index + 1}番目の回路の順番`}
+      onChange={(e) => setText(e.target.value)}
+      onFocus={(e) => e.target.select()}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          (e.target as HTMLInputElement).blur();
+        } else if (e.key === 'Escape') {
+          setText(String(index + 1));
+        }
+        e.stopPropagation();
+      }}
+    />
+  );
+}
+
 function CircuitGrid({
   circuits,
   updateCircuit,
   addCircuit,
   removeCircuits,
   moveCircuit,
+  moveCircuitTo,
 }: {
   circuits: Circuit[];
   updateCircuit: (id: string, fn: (c: Circuit) => Circuit) => void;
   addCircuit: (afterIndex?: number) => void;
   removeCircuits: (ids: string[]) => void;
   moveCircuit: (index: number, delta: number) => void;
+  moveCircuitTo: (from: number, to: number) => void;
 }) {
   const gridRef = useRef<HTMLTableElement>(null);
   /** 選択した回路（まとめて削除用）。Shift を押しながらクリックすると範囲で選べる */
@@ -600,6 +640,7 @@ function CircuitGrid({
                 aria-label="すべて選択"
               />
             </th>
+            <th title="順番の数字を書き換えると、その位置へ移ります（例: 5 → 2 と書くと、2番目へ移動）">順</th>
             <th>回路名称</th>
             <th title="ELB・MCB・Mg など（自由に書けます）">種別</th>
             <th>容量[A]</th>
@@ -620,6 +661,9 @@ function CircuitGrid({
                   onClick={(e) => pick(i, (e.target as HTMLInputElement).checked, e.shiftKey)}
                   onChange={() => {}}
                 />
+              </td>
+              <td className="order-col">
+                <OrderInput index={i} count={circuits.length} onMove={(to) => moveCircuitTo(i, to)} />
               </td>
               <td>
                 <input className="name" value={c.name} {...cellProps(i, 'name')} onChange={(e) => updateCircuit(c.id, (x) => ({ ...x, name: e.target.value }))} />
@@ -694,7 +738,7 @@ function CircuitGrid({
           </>
         )}
         <span className="muted">
-          Enter・↑↓ で上下に移動、最終行で Enter → 行を追加。左のチェックで複数選んでまとめて削除（Shift+クリックで範囲選択）。使用電圧は自由に書けます（候補: 105 / 105/210 / 210 / 440）。
+          Enter・↑↓ で上下に移動、最終行で Enter → 行を追加。左のチェックで複数選んでまとめて削除（Shift+クリックで範囲選択）。並び替えは「順」の数字を書き換えて Enter（例: 5 → 2 で、2番目へ移動）か、↑↓ ボタン。使用電圧は自由に書けます（候補: 105 / 105/210 / 210 / 440）。
           測定値は入力しません（帳票の空欄に、印刷してから記入します）。
         </span>
       </div>
