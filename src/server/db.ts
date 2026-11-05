@@ -63,6 +63,7 @@ export class Store {
       );
     `);
     this.migrateVoltagePatterns();
+    this.clearCircuitNo();
   }
 
   /**
@@ -88,6 +89,25 @@ export class Store {
       }
     })();
     this.db.prepare("INSERT INTO settings (key, value) VALUES ('voltage_patterns_migrated', '1') ON CONFLICT(key) DO NOTHING").run();
+    return changed;
+  }
+
+  /**
+   * 回路No は使わなくなったので、保存済みの報告書の回路No をすべて空にする（何度実行しても同じ結果）。
+   * 更新日時は変えない。戻り値は直した報告書の数。
+   */
+  clearCircuitNo(): number {
+    const rows = this.db.prepare('SELECT id, data FROM reports').all() as { id: string; data: string }[];
+    const update = this.db.prepare('UPDATE reports SET data = ? WHERE id = ?');
+    let changed = 0;
+    this.db.transaction(() => {
+      for (const row of rows) {
+        const parsed = ReportSchema.safeParse(safeJson(row.data));
+        if (!parsed.success || parsed.data.circuits.every((c) => c.no === '')) continue;
+        update.run(JSON.stringify({ ...parsed.data, circuits: parsed.data.circuits.map((c) => ({ ...c, no: '' })) }), row.id);
+        changed++;
+      }
+    })();
     return changed;
   }
 
@@ -270,6 +290,7 @@ export class Store {
         }
       });
       tx();
+      this.clearCircuitNo(); // 取り込んだ古いデータの回路No も消す
       return result;
     } finally {
       src.close();

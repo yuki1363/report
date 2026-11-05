@@ -78,7 +78,7 @@ function circuitValues(c: Circuit, index: number, criteria: Criteria): Record<st
   const j = judgeCircuit(c, criteria);
   const v: Record<string, string> = {
     'c.index': String(index + 1),
-    'c.no': c.no,
+    'c.no': '', // 回路No は使わない（古い書式に {{c.no}} が残っていても空欄で出す）
     'c.name': c.name,
     'c.deviceType': c.deviceType ?? '',
     'c.system': c.system,

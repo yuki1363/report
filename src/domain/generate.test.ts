@@ -37,7 +37,7 @@ const mini: Sheet = {
   cells: {
     '0,0': { value: '{{panel.name}}' },
     '1,0': { value: 'No' },
-    '2,0': { value: '{{c.no}}' },
+    '2,0': { value: '{{c.index}}' },
     '2,1': { value: '{{c.name}}' },
     '3,0': { value: '{{c.judgment}}' },
     '4,0': { value: '計 {{report.circuitCount}} / {{report.judgment}} / {{unknown}}' },
@@ -65,6 +65,12 @@ describe('generateSheet（repeatRegion 展開）', () => {
     expect(s.merges).toContainEqual({ r1: 7, c1: 0, r2: 7, c2: 1 });
     expect(s.merges).toContainEqual({ r1: 8, c1: 0, r2: 8, c2: 1 });
     expect(s.repeatRegion).toBeUndefined();
+  });
+
+  it('古い書式に {{c.no}} が残っていても、回路No は空欄で出す', () => {
+    const old = { ...mini, cells: { ...mini.cells, '2,0': { value: '{{c.no}}' } } };
+    const s = generateSheet(old, report(2));
+    expect(s.cells['2,0']!.value).toBe('');
   });
 
   it('回路0件でも空の1ブロックを出す', () => {

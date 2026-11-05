@@ -244,3 +244,17 @@ describe('一括印刷・選択印刷（PDF をまとめる）', () => {
     expect((await post([])).status).toBe(400);
   });
 });
+
+describe('回路No の自動削除', () => {
+  it('保存済みの回路No をすべて空にする。更新日時は変えない。2回目は何も変えない', () => {
+    const s = new Store(':memory:');
+    const c = (id: string, no: string) => ({ id, no, name: id, system: '1φ2W' as const, useVoltage: 105, groundVoltage: 105, testVoltage: 125 as const, readings: {}, source: 'manual' as const });
+    s.saveReport({ id: 'r1', templateId: 'default', panel: { name: '盤' }, date: '', inspector: '', instrument: { model: '' }, sourceFiles: [], circuits: [c('a', '01'), c('b', '02')] });
+    const before = s.listReports()[0]!.updatedAt;
+    expect(s.clearCircuitNo()).toBe(1);
+    expect(s.getReport('r1')!.circuits.map((x) => x.no)).toEqual(['', '']);
+    expect(s.listReports()[0]!.updatedAt).toBe(before);
+    expect(s.clearCircuitNo()).toBe(0);
+    s.close();
+  });
+});
