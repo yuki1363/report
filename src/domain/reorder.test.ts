@@ -26,7 +26,7 @@ describe('回路の並び替え（順番の数字で移す）', () => {
 describe('選んだ複数行をまとめて移す', () => {
   const l = ['a', 'b', 'c', 'd', 'e', 'f'];
   it('先頭へ: c と e を1番目へ → c e a b d f（かたまりの中の順は変えない）', () => expect(moveBlock(l, new Set([2, 4]), 0)).toEqual(['c', 'e', 'a', 'b', 'd', 'f']));
-  it('途中へ: a と b を4番目へ → c d a b e f', () => expect(moveBlock(l, new Set([0, 1]), 3)).toEqual(['c', 'd', 'a', 'b', 'e', 'f']));
+  it('途中へ: a と b を4番目へ → c d e a b f（かたまりの先頭 a が4番目）', () => expect(moveBlock(l, new Set([0, 1]), 3)).toEqual(['c', 'd', 'e', 'a', 'b', 'f']));
   it('はみ出す指定は末尾に合わせる', () => expect(moveBlock(l, new Set([0, 2]), 99)).toEqual(['b', 'd', 'e', 'f', 'a', 'c']));
   it('選んでいなければ変えない・元の配列は書き換えない', () => {
     expect(moveBlock(l, new Set(), 2)).toEqual(l);
