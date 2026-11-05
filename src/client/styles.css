@@ -225,3 +225,5 @@ table.grid tr.picked td.sticky-left { background: #dbeafe; }
 /* 回路の順番（数字を書き換えて並び替え） */
 table.grid td.order-col { width: 3em; padding: 0 2px; text-align: center; }
 table.grid input.order { width: 2.6em; text-align: center; padding: 2px; }
+table.grid + .grid-footer .move-selected, .grid-footer .move-selected { display: inline-flex; align-items: center; gap: 4px; }
+.grid-footer .move-selected input.order { width: 4.5em; text-align: center; padding: 2px; }

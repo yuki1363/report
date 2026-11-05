@@ -14,3 +14,15 @@ export function parseOrder(text: string, count: number): number | undefined {
   if (!/^\d+$/.test(t)) return undefined;
   return Math.min(Math.max(Number(t), 1), count) - 1;
 }
+
+/**
+ * 選んだ複数の要素（selected: 0始まりの位置）を、1つのかたまりにして to 番目（0始まり）へ移す。
+ * かたまりの中の並びは、いまの並びのまま。to は「かたまりの先頭が来る位置」で、はみ出す分は末尾に合わせる。
+ */
+export function moveBlock<T>(list: readonly T[], selected: ReadonlySet<number>, to: number): T[] {
+  const picked = list.filter((_, i) => selected.has(i));
+  if (picked.length === 0) return [...list];
+  const rest = list.filter((_, i) => !selected.has(i));
+  const t = Math.min(Math.max(to, 0), rest.length);
+  return [...rest.slice(0, t), ...picked, ...rest.slice(t)];
+}

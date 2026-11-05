@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { moveTo, parseOrder } from './reorder.ts';
+import { moveBlock, moveTo, parseOrder } from './reorder.ts';
 
 describe('回路の並び替え（順番の数字で移す）', () => {
   const l = ['a', 'b', 'c', 'd', 'e'];
@@ -20,5 +20,16 @@ describe('回路の並び替え（順番の数字で移す）', () => {
     expect(parseOrder('99', 5)).toBe(4);
     expect(parseOrder('', 5)).toBeUndefined();
     expect(parseOrder('a1', 5)).toBeUndefined();
+  });
+});
+
+describe('選んだ複数行をまとめて移す', () => {
+  const l = ['a', 'b', 'c', 'd', 'e', 'f'];
+  it('先頭へ: c と e を1番目へ → c e a b d f（かたまりの中の順は変えない）', () => expect(moveBlock(l, new Set([2, 4]), 0)).toEqual(['c', 'e', 'a', 'b', 'd', 'f']));
+  it('途中へ: a と b を4番目へ → c d a b e f', () => expect(moveBlock(l, new Set([0, 1]), 3)).toEqual(['c', 'd', 'a', 'b', 'e', 'f']));
+  it('はみ出す指定は末尾に合わせる', () => expect(moveBlock(l, new Set([0, 2]), 99)).toEqual(['b', 'd', 'e', 'f', 'a', 'c']));
+  it('選んでいなければ変えない・元の配列は書き換えない', () => {
+    expect(moveBlock(l, new Set(), 2)).toEqual(l);
+    expect(l).toEqual(['a', 'b', 'c', 'd', 'e', 'f']);
   });
 });
