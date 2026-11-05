@@ -452,7 +452,7 @@ export function SheetEditor({ initial, previewReport, actions, subtitle, onDirty
                 ))}
               </optgroup>
               <optgroup label="回路（回路行の中で使う）">
-                {BINDINGS.filter((b) => b.scope === 'circuit').map((b) => (
+                {BINDINGS.filter((b) => b.scope === 'circuit' && b.key !== 'c.no').map((b) => (
                   <option key={b.key} value={b.key}>{b.label}</option>
                 ))}
               </optgroup>
