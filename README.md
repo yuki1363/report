@@ -88,3 +88,5 @@ npm run gen:template  # templates/default.json を再生成
 | `src/client/` | React 画面 |
 | `templates/default.json` | 既定テンプレート（A4 横） |
 | `data/` | SQLite・画像（Git 管理外） |
+
+報告書一覧は、「自分で決めた順（グループ）」で、名前を付けたグループに盤を分けて並べられる（グループ内の順番は数字の書き換え・↑↓・複数選択でまとめて移動）。この並びが、一括印刷・一括 PDF/Excel の順番になる。並びとグループは設定テーブル（`layout`）に保存し、報告書の更新日時は変えない。

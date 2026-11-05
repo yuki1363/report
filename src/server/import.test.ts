@@ -258,3 +258,20 @@ describe('回路No の自動削除', () => {
     s.close();
   });
 });
+
+describe('報告書一覧の並びとグループの保存', () => {
+  it('保存した並びを、いまの報告書に合わせて返す（新しい報告書は未分類の末尾・消えた報告書は外れる）', () => {
+    const s = new Store(':memory:');
+    const mk = (id: string) => ({ id, templateId: 'default', panel: { name: id }, date: '', inspector: '', instrument: { model: '' }, sourceFiles: [], circuits: [] });
+    s.saveReport(mk('a')); s.saveReport(mk('b')); s.saveReport(mk('c'));
+    expect(s.getLayout().groups).toEqual([]);
+    expect(new Set(s.getLayout().ungrouped)).toEqual(new Set(['a', 'b', 'c']));
+    s.saveLayout({ groups: [{ id: 'g1', name: '棟1', ids: ['b', 'ghost'] }], ungrouped: ['c', 'a'] });
+    expect(s.getLayout()).toEqual({ groups: [{ id: 'g1', name: '棟1', ids: ['b'] }], ungrouped: ['c', 'a'] });
+    s.saveReport(mk('d'));
+    expect(s.getLayout().ungrouped).toEqual(['c', 'a', 'd']);
+    s.deleteReport('c');
+    expect(s.getLayout().ungrouped).toEqual(['a', 'd']);
+    s.close();
+  });
+});

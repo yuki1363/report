@@ -2,6 +2,7 @@
 import Database from 'better-sqlite3';
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { EMPTY_LAYOUT, LayoutSchema, reconcileLayout, type Layout } from '../domain/layout.ts';
 import { normalizeLegacyVoltage } from '../domain/voltagePattern.ts';
 import { ImportRecordSchema, type ImportRecord } from '../shared/extraction.ts';
 import {
@@ -205,6 +206,19 @@ export class Store {
 
   deleteUserTemplate(id: string): boolean {
     return this.db.prepare('DELETE FROM templates WHERE id = ?').run(id).changes > 0;
+  }
+
+  /** 報告書一覧の並びとグループ（いまの報告書に合わせて整えて返す） */
+  getLayout(): Layout {
+    const row = this.db.prepare("SELECT value FROM settings WHERE key = 'layout'").get() as { value: string } | undefined;
+    const parsed = LayoutSchema.safeParse(row ? safeJson(row.value) : undefined);
+    return reconcileLayout(parsed.success ? parsed.data : EMPTY_LAYOUT, this.listReports().map((r) => r.id));
+  }
+
+  saveLayout(layout: Layout): Layout {
+    const fixed = reconcileLayout(LayoutSchema.parse(layout), this.listReports().map((r) => r.id));
+    this.db.prepare("INSERT INTO settings (key, value) VALUES ('layout', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run(JSON.stringify(fixed));
+    return fixed;
   }
 
   getSettings(): Settings {

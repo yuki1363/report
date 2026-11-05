@@ -1,3 +1,4 @@
+import type { Layout } from '../domain/layout.ts';
 import type { ConfirmBody, ImportRecord } from '../shared/extraction.ts';
 import type { Criteria, Report, ReportSummary, Settings, Sheet, Template } from '../shared/schema.ts';
 
@@ -59,6 +60,8 @@ export interface TemplateSummary {
 
 export const api = {
   listReports: () => call<ReportSummary[]>('/api/reports'),
+  getLayout: () => call<Layout>('/api/layout'),
+  saveLayout: (layout: Layout) => call<Layout>('/api/layout', { method: 'PUT', body: JSON.stringify(layout) }),
   createReport: (from?: string, mode?: 'copy' | 'inherit') =>
     call<Report>('/api/reports', { method: 'POST', body: JSON.stringify(from ? { from, mode } : {}) }),
   getReport: (id: string) => call<Report>(`/api/reports/${id}`),

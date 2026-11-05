@@ -7,6 +7,7 @@ import { join } from 'node:path';
 import { z } from 'zod';
 import { comparePrevious } from '../domain/compare.ts';
 import { generateSheet } from '../domain/generate.ts';
+import { LayoutSchema } from '../domain/layout.ts';
 import { renderSheetHtml } from '../domain/renderHtml.ts';
 import {
   DEFAULT_CRITERIA,
@@ -246,6 +247,10 @@ export function createApp({ store, dataDir, paths, pdf = htmlToPdf, extractors =
 
   // --- 取込・読み取り ---
   registerImportRoutes(app, store, dataDir, { ...defaultExtractors, ...extractors });
+
+  // --- 報告書一覧の並びとグループ ---
+  app.get('/api/layout', (c) => c.json(store.getLayout()));
+  app.put('/api/layout', async (c) => c.json(store.saveLayout(LayoutSchema.parse(await c.req.json()))));
 
   // --- 設定 ---
   app.get('/api/settings', (c) =>
